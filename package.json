@@ -1,0 +1,6 @@
+{
+  "name": "url-shortener",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Distributed URL shortener with analytics pipeline"
+}
