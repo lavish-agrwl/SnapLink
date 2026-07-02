@@ -2,5 +2,15 @@
   "name": "url-shortener",
   "version": "0.1.0",
   "private": true,
-  "description": "Distributed URL shortener with analytics pipeline"
+  "description": "Distributed URL shortener with analytics pipeline",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "helmet": "^6.0.1",
+    "cors": "^2.8.5",
+    "morgan": "^1.10.0"
+  }
 }
