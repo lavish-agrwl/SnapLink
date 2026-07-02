@@ -10,7 +10,7 @@
 
 ## Phase 2: Core Models
 
-- [ ] Define the MongoDB `urls` collection schema with unique slug and expiry indexes.
+- [x] Define the MongoDB `urls` collection schema with unique slug and expiry indexes.
 - [ ] Define the MongoDB `clicks` collection schema with analytics and TTL indexes.
 - [ ] Add the shared data access layer for URL documents and click documents.
 

@@ -1,17 +1,17 @@
-const mongoose = require('mongoose');
-const IORedis = require('ioredis');
-const { Queue } = require('bullmq');
+const mongoose = require("mongoose");
+const IORedis = require("ioredis");
+const { Queue } = require("bullmq");
 
 async function checkRedis(redisUrl) {
   const redis = new IORedis(redisUrl, { lazyConnect: true });
-  redis.on('error', () => {});
+  redis.on("error", () => {});
 
   try {
     await redis.connect();
     await redis.ping();
-    return 'connected';
+    return "connected";
   } catch (err) {
-    return 'disconnected';
+    return "disconnected";
   } finally {
     redis.disconnect();
   }
@@ -21,13 +21,13 @@ async function checkMongo(mongoUri) {
   const connection = mongoose.createConnection(mongoUri, {
     serverSelectionTimeoutMS: 2000,
   });
-  connection.on('error', () => {});
+  connection.on("error", () => {});
 
   try {
     await connection.asPromise();
-    return 'connected';
+    return "connected";
   } catch (err) {
-    return 'disconnected';
+    return "disconnected";
   } finally {
     await connection.close().catch(() => {});
   }
@@ -35,11 +35,11 @@ async function checkMongo(mongoUri) {
 
 async function getQueueDepth(redisUrl) {
   const connection = new IORedis(redisUrl, { lazyConnect: true });
-  connection.on('error', () => {});
-  const queue = new Queue('click-events', { connection });
+  connection.on("error", () => {});
+  const queue = new Queue("click-events", { connection });
 
   try {
-    const counts = await queue.getJobCounts('waiting', 'active', 'delayed');
+    const counts = await queue.getJobCounts("waiting", "active", "delayed");
     return counts.waiting + counts.active + counts.delayed;
   } catch (err) {
     return 0;
@@ -57,7 +57,10 @@ async function getHealthStatus(env) {
   ]);
 
   return {
-    status: redisStatus === 'connected' && mongoStatus === 'connected' ? 'ok' : 'degraded',
+    status:
+      redisStatus === "connected" && mongoStatus === "connected"
+        ? "ok"
+        : "degraded",
     redis: redisStatus,
     mongodb: mongoStatus,
     queueDepth,

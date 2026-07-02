@@ -2,7 +2,7 @@ node_modules
 dist
 build
 .env
-.env.*
+.env*
 coverage
 .git
 npm-debug.log
