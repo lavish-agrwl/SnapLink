@@ -6,6 +6,7 @@ const morgan = require("morgan");
 const { loadEnv } = require("../src/config/env");
 const { getHealthStatus } = require("../src/services/health");
 const { createShortUrl } = require("../src/services/shorten");
+const { getRedirectUrl } = require("../src/services/redirect");
 const { getRedisClient } = require("../src/services/redisClient");
 
 let env;
@@ -81,6 +82,23 @@ app.get("/health", async (req, res) => {
       mongodb: "disconnected",
       queueDepth: 0,
       error: err.message,
+    });
+  }
+});
+
+app.get("/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const originalUrl = await getRedirectUrl(slug, redisClient);
+
+    if (!originalUrl) {
+      return res.status(404).json({ error: "Slug not found or expired" });
+    }
+
+    res.redirect(301, originalUrl);
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to redirect",
     });
   }
 });
