@@ -1,4 +1,5 @@
-const { Worker } = require("bullmq");
+const { Queue, Worker } = require("bullmq");
+const { CLICK_EVENTS_DLQ } = require("./queue");
 const { bulkIncrementUrlClicks, createClicksBatch } = require("../data");
 
 const DEFAULT_BATCH_SIZE = 50;
@@ -69,6 +70,15 @@ function scheduleFlush(state, flushIntervalMs) {
 function createClickBatchWorker(queueName, redisConnection, options = {}) {
   const batchSize = options.batchSize || DEFAULT_BATCH_SIZE;
   const flushIntervalMs = options.flushIntervalMs || DEFAULT_FLUSH_INTERVAL_MS;
+  const ownsDlq = !options.dlq;
+  const dlq = options.dlq || new Queue(CLICK_EVENTS_DLQ, {
+    connection: redisConnection,
+    defaultJobOptions: {
+      attempts: 1,
+      removeOnComplete: false,
+      removeOnFail: false,
+    },
+  });
   const state = createBatchState();
 
   scheduleFlush(state, flushIntervalMs);
@@ -90,8 +100,23 @@ function createClickBatchWorker(queueName, redisConnection, options = {}) {
     },
   );
 
-  worker.on("failed", async () => {
-    // Let BullMQ retry according to queue settings; nothing to do here yet.
+  worker.on("failed", async (job, err) => {
+    if (!job || job.attemptsMade < (job.opts.attempts || 1)) {
+      return;
+    }
+
+    try {
+      await dlq.add("click-failed", {
+        originalJobId: job.id,
+        failedReason: err ? err.message : job.failedReason,
+        attemptsMade: job.attemptsMade,
+        data: job.data,
+      }, {
+        jobId: `failed:${job.id}`,
+      });
+    } catch (dlqErr) {
+      console.error("Failed to route click job to DLQ:", dlqErr);
+    }
   });
 
   return {
@@ -105,6 +130,9 @@ function createClickBatchWorker(queueName, redisConnection, options = {}) {
       }
       await flushBatch(state);
       await worker.close();
+      if (ownsDlq) {
+        await dlq.close();
+      }
     },
   };
 }

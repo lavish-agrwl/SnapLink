@@ -5,11 +5,12 @@ const morgan = require("morgan");
 
 const { loadEnv } = require("../src/config/env");
 const { getHealthStatus } = require("../src/services/health");
+const { createQueueBoard } = require("../src/services/bullBoard");
 const { createShortUrl } = require("../src/services/shorten");
 const { getRedirectUrl } = require("../src/services/redirect");
 const { getRedisClient } = require("../src/services/redisClient");
 const {
-  getQueue,
+  getClickQueues,
   enqueueClick,
   getClientIp,
 } = require("../src/services/queue");
@@ -38,10 +39,11 @@ const app = express();
 const redisClient = getRedisClient(env.REDIS_URL);
 // Extract Redis connection from URL for BullMQ
 const redisUrl = new URL(env.REDIS_URL);
-const clickQueue = getQueue("click-events", {
+const redisConnection = {
   host: redisUrl.hostname || "127.0.0.1",
   port: parseInt(redisUrl.port || "6379", 10),
-});
+};
+const { clickQueue, clickDlq } = getClickQueues(redisConnection);
 
 app.use(helmet());
 app.use(express.json());
@@ -55,6 +57,8 @@ if (env.NODE_ENV === "production") {
 app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
 
 app.get("/", (req, res) => res.json({ status: "ok" }));
+
+app.use("/admin/queues", createQueueBoard({ clickQueue, clickDlq }));
 
 app.post("/api/shorten", async (req, res) => {
   const clientIp = getClientIp(req);

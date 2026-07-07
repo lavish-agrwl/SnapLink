@@ -2,6 +2,8 @@ const { Queue } = require("bullmq");
 const crypto = require("crypto");
 const { buildClickEventPayload } = require("../validation/clickEvent");
 
+const CLICK_EVENTS_QUEUE = "click-events";
+const CLICK_EVENTS_DLQ = "click-events-dlq";
 const queues = new Map();
 
 /**
@@ -33,6 +35,13 @@ function getQueue(queueName, redisConnection) {
   }
 
   return queues.get(queueName);
+}
+
+function getClickQueues(redisConnection) {
+  return {
+    clickQueue: getQueue(CLICK_EVENTS_QUEUE, redisConnection),
+    clickDlq: getQueue(CLICK_EVENTS_DLQ, redisConnection),
+  };
 }
 
 /**
@@ -94,7 +103,10 @@ async function enqueueClick(queue, slug, req, timestamp = new Date()) {
 }
 
 module.exports = {
+  CLICK_EVENTS_QUEUE,
+  CLICK_EVENTS_DLQ,
   getQueue,
+  getClickQueues,
   hashIp,
   getClientIp,
   enqueueClick,
