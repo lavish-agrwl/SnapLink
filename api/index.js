@@ -8,7 +8,8 @@ const { getHealthStatus } = require("../src/services/health");
 const { createQueueBoard } = require("../src/services/bullBoard");
 const { createShortUrl } = require("../src/services/shorten");
 const { getRedirectUrl } = require("../src/services/redirect");
-const { getRedisClient } = require("../src/services/redisClient");
+const { getAnalytics } = require("../src/services/analytics");
+
 const {
   getClickQueues,
   enqueueClick,
@@ -158,7 +159,36 @@ app.get("/:slug", async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3000;
+app.get("/api/analytics/:slug", async (req, res) => {
+  const clientIp = getClientIp(req);
+  const now = new Date();
+  const rateLimitResult = await checkRateLimit(
+    redisClient,
+    clientIp,
+    "analytics",
+    RATE_LIMITS.analytics.limit,
+    now,
+  );
+  setRateLimitHeaders(res, rateLimitResult, RATE_LIMITS.analytics.limit);
+
+  if (!rateLimitResult.allowed) {
+    return res.status(429).json({ error: "Rate limit exceeded" });
+  }
+
+  try {
+    const { slug } = req.params;
+    const analytics = await getAnalytics(slug, { redisClient, now });
+    if (!analytics) {
+      return res.status(404).json({ error: "Slug not found or expired" });
+    }
+    res.json(analytics);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to retrieve analytics" });
+  }
+});
+
+
 app.listen(port, () => {
   console.log(`API listening on ${port} (env=${env.NODE_ENV})`);
 });

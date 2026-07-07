@@ -38,8 +38,8 @@
 
 ## Phase 6: Analytics API
 
-- [ ] Implement the MongoDB aggregation pipelines for total clicks, clicks per day, top referrers, and top countries.
-- [ ] Implement `GET /api/analytics/:slug` using aggregation results and Redis caching with a 60-second TTL.
+- [x] Implement the MongoDB aggregation pipelines for total clicks, clicks per day, top referrers, and top countries.
+- [x] Implement `GET /api/analytics/:slug` using aggregation results and Redis caching with a 60-second TTL.
 - [ ] Apply the analytics rate limit defined in the SRS.
 
 ## Phase 7: Frontend Dashboard
