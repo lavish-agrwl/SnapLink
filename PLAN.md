@@ -51,6 +51,6 @@
 ## Phase 8: Testing and Delivery
 
 - [x] Add unit tests for slug generation, URL validation, and sliding-window rate limiting.
-- [ ] Add integration tests for shorten, redirect, analytics, and health endpoint behavior.
+- [x] Add integration tests for shorten, redirect, analytics, and health endpoint behavior.
 - [ ] Add GitHub Actions to run linting, tests, and the production build on pushes to `main`.
 - [ ] Add production deployment configuration for Railway backend services and the Vercel dashboard build.
