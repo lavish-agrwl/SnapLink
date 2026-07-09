@@ -34,7 +34,7 @@ async function createShortUrl(payload, options = {}) {
   const now = options.now || new Date();
   const createdBy = options.createdBy || null;
 
-  let slug = parsedPayload.customSlug;
+  let slug = parsedPayload.customSlug || parsedPayload.slug;
   if (!slug) {
     slug = await generateUniqueSlug(async (candidate) => {
       const existing = await findUrlBySlug(candidate);

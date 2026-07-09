@@ -23,6 +23,14 @@ const shortenRequestSchema = z.object({
       "customSlug must be 3-30 chars and contain only letters, numbers, or hyphens",
     )
     .optional(),
+  slug: z
+    .string()
+    .trim()
+    .regex(
+      customSlugPattern,
+      "slug must be 3-30 chars and contain only letters, numbers, or hyphens",
+    )
+    .optional(),
   expiresAt: z.coerce
     .date({ error: "expiresAt must be a valid date" })
     .optional(),
