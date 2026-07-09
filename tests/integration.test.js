@@ -5,8 +5,7 @@ const mongoose = require('mongoose');
 const { getRedisClient } = require('../src/services/redisClient');
 const { getClickQueues } = require('../src/services/queue');
 const { createQueueBoard } = require('../src/services/bullBoard');
-const { checkHealthStatus } = require('../src/services/health');
-const { loadEnv } = require('../src/config/env');
+const { getHealthStatus } = require('../src/services/health');
 const { getAnalytics } = require('../src/services/analytics');
 const { createShortUrl } = require('../src/services/shorten');
 const { getRedirectUrl } = require('../src/services/redirect');
@@ -63,7 +62,7 @@ async function setupServer({ mongoUri, redisUrl }) {
 
   app.get("/health", async (req, res) => {
     try {
-      const health = await checkHealthStatus({ REDIS_URL: redisUrl, MONGODB_URI: mongoUri });
+      const health = await getHealthStatus({ REDIS_URL: redisUrl, MONGODB_URI: mongoUri });
       const statusCode = health.status === "ok" ? 200 : 503;
       res.status(statusCode).json(health);
     } catch (err) {
@@ -97,7 +96,8 @@ async function setupServer({ mongoUri, redisUrl }) {
 describe('Integration tests', () => {
   let mongoServer;
   let mongoUri;
-  let redisUrl = "redis://localhost:6379"; // will be mocked by ioredis-mock in test env
+  let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  let redisClient;
   let serverInfo;
 
   beforeAll(async () => {
@@ -105,13 +105,29 @@ describe('Integration tests', () => {
     mongoServer = await MongoMemoryServer.create();
     mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
+
+    // Ensure Redis is connected
+    redisClient = getRedisClient(redisUrl);
+    try {
+      await redisClient.ping();
+    } catch (err) {
+      throw new Error(`Redis connection failed: ${err.message}. Make sure Redis is running at ${redisUrl}`);
+    }
+
     serverInfo = await setupServer({ mongoUri, redisUrl });
+  });
+
+  beforeEach(async () => {
+    // Clear Redis state between tests
+    await redisClient.flushdb();
   });
 
   afterAll(async () => {
     await mongoose.disconnect();
     await mongoServer.stop();
     serverInfo.server.close();
+    // Do not disconnect shared Redis client unless necessary, but for tests we can
+    await redisClient.quit();
   });
 
   test('POST /api/shorten creates a short URL', async () => {

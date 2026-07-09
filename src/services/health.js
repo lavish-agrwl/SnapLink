@@ -24,7 +24,10 @@ async function checkMongo(mongoUri) {
   connection.on("error", () => {});
 
   try {
-    await connection.asPromise();
+    await new Promise((resolve, reject) => {
+      connection.once("open", resolve);
+      connection.once("error", reject);
+    });
     return "connected";
   } catch (err) {
     return "disconnected";

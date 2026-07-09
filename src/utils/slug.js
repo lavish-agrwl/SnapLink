@@ -27,16 +27,15 @@ function generateDefaultSlug(objectId = new mongoose.Types.ObjectId()) {
   const objectIdAsBigInt = BigInt(`0x${objectIdHex}`);
 
   const encoded = encodeBase62(objectIdAsBigInt);
-  return encoded.padStart(DEFAULT_SLUG_LENGTH, BASE62_ALPHABET[0]).slice(0, DEFAULT_SLUG_LENGTH);
+  return encoded.padStart(DEFAULT_SLUG_LENGTH, BASE62_ALPHABET[0]).slice(-DEFAULT_SLUG_LENGTH);
 }
 
 async function generateUniqueSlug(existsFn, options = {}) {
   const maxAttempts = options.maxAttempts || MAX_SLUG_ATTEMPTS;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const slug = generateDefaultSlug(
-      options.objectId || new mongoose.Types.ObjectId(),
-    );
+    const objectId = (attempt === 0 && options.objectId) || new mongoose.Types.ObjectId();
+    const slug = generateDefaultSlug(objectId);
     console.log(`Attempt ${attempt + 1}: Testing slug ${slug}`);
     const slugExists = await existsFn(slug);
 
