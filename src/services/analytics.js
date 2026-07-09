@@ -49,13 +49,14 @@ async function getAnalytics(slug, { redisClient, now = new Date() } = {}) {
     aggregateTopCountries(slug),
   ]);
 
-  const result = {
-    slug,
-    totalClicks,
-    clicksPerDay,
-    topReferrers,
-    topCountries,
-  };
+   const result = {
+     slug,
+     createdAt: urlRecord.createdAt,
+     totalClicks,
+     clicksPerDay,
+     topReferrers,
+     topCountries,
+   };
 
   // Cache result for 60 seconds if cache available
   if (redisClient) {

@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   // --- State & Constants ---
-  let clicksChart = null;
+  // let clicksChart = null;
 
   // --- Elements ---
   const healthBadge = document.getElementById('health-badge');
-  
+
   const urlsLoading = document.getElementById('urls-loading');
   const urlsError = document.getElementById('urls-error');
   const urlsContent = document.getElementById('urls-content');
@@ -22,17 +22,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const analyticsContent = document.getElementById('analytics-content');
   const analyticsLoading = document.getElementById('analytics-loading');
   const analyticsError = document.getElementById('analytics-error');
-  const statTotalClicks = document.getElementById('stat-total-clicks');
-  const statTopReferrer = document.getElementById('stat-top-referrer');
-  const referrersTableBody = document.querySelector('#referrers-table tbody');
-  const clicksCanvas = document.getElementById('clicks-chart');
+   const statTotalClicks = document.getElementById('stat-total-clicks');
+   const statTopReferrer = document.getElementById('stat-top-referrer');
+   const statCreatedAt = document.getElementById('stat-created-at');
+   const referrersTableBody = document.querySelector('#referrers-table tbody');
+   const countriesTableBody = document.querySelector('#countries-table tbody');
+   const clicksCanvas = document.getElementById('clicks-chart');
 
   // --- Health Polling ---
   async function updateHealth() {
     try {
       const resp = await fetch('/health');
       const data = await resp.json();
-      
+
       healthBadge.textContent = `System: ${data.status.toUpperCase()}`;
       healthBadge.className = `badge badge-${data.status}`;
     } catch (e) {
@@ -88,14 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Shorten URL ---
   shortenForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const url = document.getElementById('long-url').value;
     const customSlug = document.getElementById('custom-slug').value;
     const expiresAt = document.getElementById('expiry-date').value;
-    
+
     shortenResult.classList.add('hidden');
     shortenError.classList.add('hidden');
-    
+
     const payload = { url };
     if (customSlug) payload.customSlug = customSlug;
     if (expiresAt) payload.expiresAt = expiresAt;
@@ -106,21 +108,21 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
+
       const data = await resp.json();
-      
+
       if (!resp.ok) {
         throw new Error(data.error || 'Failed to shorten URL');
       }
 
       shortenUrlText.textContent = data.shortUrl;
-      
+
       let meta = `Created: ${new Date(data.createdAt).toLocaleString()}`;
       if (data.expiresAt) {
         meta += ` | Expires: ${new Date(data.expiresAt).toLocaleString()}`;
       }
       shortenMeta.textContent = meta;
-      
+
       shortenResult.classList.remove('hidden');
       loadUrls();
     } catch (err) {
@@ -157,27 +159,43 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(data.error || 'Analytics not found for this slug');
       }
 
-      // Update Stats
-      statTotalClicks.textContent = data.totalClicks.toLocaleString();
-      const topRef = data.topReferrers && data.topReferrers.length > 0 
-        ? data.topReferrers[0].referrer 
-        : 'Direct/Unknown';
-      statTopReferrer.textContent = topRef;
+       // Update Stats
+       statTotalClicks.textContent = data.totalClicks.toLocaleString();
+       const topRef = data.topReferrers && data.topReferrers.length > 0
+         ? data.topReferrers[0].referrer
+         : 'Direct/Unknown';
+       statTopReferrer.textContent = topRef;
+       statCreatedAt.textContent = data.createdAt
+         ? new Date(data.createdAt).toLocaleString()
+         : 'N/A';
 
-      // Update Table
-      referrersTableBody.innerHTML = '';
-      if (data.topReferrers && data.topReferrers.length > 0) {
-        data.topReferrers.forEach(item => {
-          const row = document.createElement('tr');
-          row.innerHTML = `<td>${item.referrer}</td><td>${item.count.toLocaleString()}</td>`;
-          referrersTableBody.appendChild(row);
-        });
-      } else {
-        referrersTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center">No referrer data available</td></tr>';
-      }
+       // Update Table
+       referrersTableBody.innerHTML = '';
+       if (data.topReferrers && data.topReferrers.length > 0) {
+         data.topReferrers.forEach(item => {
+           const row = document.createElement('tr');
+           row.innerHTML = `<td>${item.referrer}</td><td>${item.count.toLocaleString()}</td>`;
+           referrersTableBody.appendChild(row);
+         });
+       } else {
+         referrersTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center">No referrer data available</td></tr>';
+       }
 
-      // Update Chart
-      renderChart(data.clicksPerDay);
+       // Update Countries Table
+       countriesTableBody.innerHTML = '';
+       if (data.topCountries && data.topCountries.length > 0) {
+         data.topCountries.forEach(item => {
+           const row = document.createElement('tr');
+           row.innerHTML = `<td>${item.country}</td><td>${item.count.toLocaleString()}</td>`;
+           countriesTableBody.appendChild(row);
+         });
+       } else {
+         countriesTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center">No country data available</td></tr>';
+       }
+
+       // Update Chart
+
+       // renderChart(data.clicksPerDay);
 
       analyticsLoading.classList.add('hidden');
       analyticsContent.classList.remove('hidden');
@@ -196,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const labels = clicksPerDay.map(d => d.date);
     const values = clicksPerDay.map(d => d.count);
 
-    clicksChart = new Chart(clicksCanvas, {
+    clicksChart = new (window.Chart || Chart)(clicksCanvas, {
       type: 'line',
       data: {
         labels,

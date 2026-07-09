@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URL Shortener Dashboard</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
@@ -82,21 +81,25 @@
       <div id="analytics-error" class="error-message hidden"></div>
 
       <div id="analytics-content" class="hidden">
-        <div class="stats-grid">
-          <div class="stat-card">
-            <span class="stat-label">Total Clicks</span>
-            <span id="stat-total-clicks" class="stat-value">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Top Referrer</span>
-            <span id="stat-top-referrer" class="stat-value">N/A</span>
-          </div>
-        </div>
+         <div class="stats-grid">
+           <div class="stat-card">
+             <span class="stat-label">Total Clicks</span>
+             <span id="stat-total-clicks" class="stat-value">0</span>
+           </div>
+           <div class="stat-card">
+             <span class="stat-label">Top Referrer</span>
+             <span id="stat-top-referrer" class="stat-value">N/A</span>
+           </div>
+           <div class="stat-card">
+             <span class="stat-label">Created At</span>
+             <span id="stat-created-at" class="stat-value">N/A</span>
+           </div>
+         </div>
 
-        <div class="chart-container">
-          <h3>Clicks per Day</h3>
-          <canvas id="clicks-chart"></canvas>
-        </div>
+         <div class="chart-container">
+           <h3>Clicks per Day</h3>
+           <canvas id="clicks-chart"></canvas>
+         </div>
 
         <div class="referrers-container">
           <h3>Top Referrers</h3>
@@ -112,10 +115,27 @@
             </tbody>
           </table>
         </div>
+
+        <div class="referrers-container">
+          <h3>Top Countries</h3>
+          <table id="countries-table">
+            <thead>
+              <tr>
+                <th>Country</th>
+                <th>Clicks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rows added by JS -->
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
