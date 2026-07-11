@@ -1,6 +1,10 @@
 const { createClickBatchWorker } = require("../src/services/clickBatchWorker");
 const { bulkIncrementUrlClicks, createClicksBatch } = require("../src/data");
 const { Worker, Queue } = require("bullmq");
+const logger = require("../src/lib/logger");
+
+jest.mock("bullmq");
+jest.mock("../src/data");
 
 jest.mock("bullmq");
 jest.mock("../src/data");
@@ -59,11 +63,11 @@ describe("clickBatchWorker Graceful Shutdown", () => {
   });
 
   it("should log error and lost events when shutdown times out", async () => {
-    const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+    const loggerSpy = jest.spyOn(logger, "error").mockImplementation();
     
-    // Make flushBatch hang
+    // Make flushBatch hang but eventually resolve to avoid open handles
     createClicksBatch.mockImplementation(() => new Promise((resolve) => {
-      // Never resolves
+      setTimeout(resolve, 1000);
     }));
 
     workerInstance.state.pendingJobs.push(
@@ -73,14 +77,16 @@ describe("clickBatchWorker Graceful Shutdown", () => {
     // Use a short timeout for testing
     await workerInstance.close(100);
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('"event":"worker_shutdown_failed"')
+    expect(loggerSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "worker_shutdown_failed" }),
+      expect.any(Error),
+      expect.stringContaining("Worker shutdown failed")
     );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('"lostEvents":1')
-    );
+    
+    const logCall = loggerSpy.mock.calls[0][0];
+    expect(logCall).toHaveProperty("lostEvents", 1);
 
-    consoleSpy.mockRestore();
+    loggerSpy.mockRestore();
   });
 
   it("should close DLQ if owned", async () => {

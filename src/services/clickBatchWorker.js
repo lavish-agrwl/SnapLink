@@ -130,6 +130,11 @@ function createClickBatchWorker(queueName, redisConnection, options = {}) {
     close: async (timeoutMs = DEFAULT_SHUTDOWN_TIMEOUT_MS) => {
       logger.debug({ event: "worker_shutdown_start" }, "Worker shutdown started");
 
+      let timeoutHandle;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error("Shutdown timed out")), timeoutMs);
+      });
+
       const shutdownPromise = (async () => {
         if (state.flushTimer) {
           clearInterval(state.flushTimer);
@@ -147,10 +152,6 @@ function createClickBatchWorker(queueName, redisConnection, options = {}) {
         }
       })();
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Shutdown timed out")), timeoutMs),
-      );
-
       try {
         await Promise.race([shutdownPromise, timeoutPromise]);
         logger.debug({ event: "worker_shutdown_complete" }, "Worker shutdown complete");
@@ -159,8 +160,9 @@ function createClickBatchWorker(queueName, redisConnection, options = {}) {
         const inFlightCount = state.currentBatch ? state.currentBatch.length : 0;
         const lostEvents = pendingCount + inFlightCount;
         logger.error({ event: "worker_shutdown_failed", lostEvents }, err, "Worker shutdown failed");
+      } finally {
+        clearTimeout(timeoutHandle);
       }
-
     },
   };
 }
