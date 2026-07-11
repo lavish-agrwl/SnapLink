@@ -19,6 +19,7 @@ const {
   enqueueClick,
   getClientIp,
 } = require("../src/services/queue");
+const logger = require("../src/lib/logger");
 const {
   checkRateLimit,
   setRateLimitHeaders,
@@ -97,6 +98,7 @@ app.post("/api/shorten", async (req, res) => {
       });
     }
 
+    logger.error({ err }, "Unexpected error during URL shortening");
     res.status(500).json({
       error: "Failed to shorten URL",
     });
@@ -110,6 +112,7 @@ app.get("/health", async (req, res) => {
 
     res.status(statusCode).json(health);
   } catch (err) {
+    logger.error({ err }, "Health check failure");
     res.status(503).json({
       status: "degraded",
       redis: "disconnected",
@@ -144,7 +147,7 @@ app.get("/api/analytics/:slug", async (req, res) => {
     }
     res.json(analytics);
   } catch (err) {
-    console.error(err);
+    logger.error({ slug: req.params.slug, err }, "Failed to retrieve analytics");
     res.status(500).json({ error: "Failed to retrieve analytics" });
   }
 });
@@ -156,6 +159,7 @@ app.get("/api/urls", async (req, res) => {
     const urls = await listUrls({ limit, skip });
     res.json(urls);
   } catch (err) {
+    logger.error({ limit: req.query.limit, skip: req.query.skip, err }, "Failed to retrieve URLs");
     res.status(500).json({ error: "Failed to retrieve URLs" });
   }
 });
@@ -190,6 +194,7 @@ app.get("/:slug", async (req, res) => {
 
     res.redirect(301, originalUrl);
   } catch (err) {
+    logger.error({ slug: req.params.slug, err }, "Redirect failure");
     res.status(500).json({
       error: "Failed to redirect",
     });
@@ -202,10 +207,10 @@ mongoose
   .connect(env.MONGODB_URI)
   .then(() => {
     app.listen(port, () => {
-      console.log(`API listening on ${port} (env=${env.NODE_ENV})`);
+      logger.info({ port, env: env.NODE_ENV }, "API listening");
     });
   })
   .catch((err) => {
-    console.error("Failed to connect to MongoDB:", err);
+    logger.error({ err }, "Failed to connect to MongoDB");
     process.exit(1);
   });

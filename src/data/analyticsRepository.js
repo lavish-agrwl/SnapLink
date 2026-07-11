@@ -1,4 +1,5 @@
 const Click = require("../models/click");
+const logger = require("../lib/logger");
 
 const THIRTY_DAYS_IN_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -7,12 +8,17 @@ function getThirtyDaysAgo(now = new Date()) {
 }
 
 async function aggregateTotalClicks(slug) {
-  const [result] = await Click.aggregate([
-    { $match: { slug } },
-    { $count: "totalClicks" },
-  ]);
+  try {
+    const [result] = await Click.aggregate([
+      { $match: { slug } },
+      { $count: "totalClicks" },
+    ]);
 
-  return result ? result.totalClicks : 0;
+    return result ? result.totalClicks : 0;
+  } catch (err) {
+    logger.error({ slug, err }, "Database error aggregating total clicks");
+    throw err;
+  }
 }
 
 async function aggregateClicksPerDay(slug, now = new Date()) {

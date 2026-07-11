@@ -3,10 +3,12 @@
  * Provides a function to retrieve analytics data for a given slug.
  * It uses Redis caching (TTL 60 seconds) for the aggregated result.
  */
-
+ 
 const { findActiveUrlBySlug } = require("../data/urlRepository");
+const logger = require("../lib/logger");
 const {
   aggregateTotalClicks,
+
   aggregateClicksPerDay,
   aggregateTopReferrers,
   aggregateTopCountries,
@@ -27,11 +29,13 @@ async function getAnalytics(slug, { redisClient, now = new Date() } = {}) {
   if (redisClient) {
     const cached = await redisClient.get(cacheKey);
     if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (_) {
-        // malformed cache entry – ignore and recompute
-      }
+       try {
+         return JSON.parse(cached);
+       } catch (_) {
+         logger.warn({ slug }, "Malformed analytics cache entry");
+         // malformed cache entry – ignore and recompute
+       }
+
     }
   }
 
@@ -59,13 +63,15 @@ async function getAnalytics(slug, { redisClient, now = new Date() } = {}) {
    };
 
   // Cache result for 60 seconds if cache available
-  if (redisClient) {
-    try {
-      await redisClient.set(cacheKey, JSON.stringify(result), "EX", 60);
-    } catch (_) {
-      // ignore cache write errors – analytics still works
-    }
-  }
+   if (redisClient) {
+     try {
+       await redisClient.set(cacheKey, JSON.stringify(result), "EX", 60);
+     } catch (_) {
+       logger.warn({ slug }, "Failed to write analytics cache");
+       // ignore cache write errors – analytics still works
+     }
+   }
+
 
   return result;
 }

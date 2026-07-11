@@ -1,6 +1,7 @@
 const { createUrl, findUrlBySlug } = require("../data");
 const { generateDefaultSlug, generateUniqueSlug } = require("../utils/slug");
 const { parseShortenRequest } = require("../validation/shortenRequest");
+const logger = require("../lib/logger");
 
 const REDIRECT_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
@@ -25,6 +26,7 @@ async function cacheShortUrl(cacheClient, slug, originalUrl, expiresAt) {
       REDIRECT_CACHE_TTL_SECONDS,
     );
   } catch (_err) {
+    logger.warn({ slug }, "Cache write failed for shortened URL");
     // Cache is best-effort; MongoDB remains the source of truth.
   }
 }

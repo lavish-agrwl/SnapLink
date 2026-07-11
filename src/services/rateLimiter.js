@@ -5,6 +5,8 @@
 
 const WINDOW_SIZE_MS = 60 * 1000; // 1 minute
 const REDIS_EXPIRY = 120; // 2 minutes (safety margin)
+const logger = require("../lib/logger");
+const crypto = require("crypto");
 
 /**
  * Check rate limit for a client/endpoint combination.
@@ -61,7 +63,8 @@ async function checkRateLimit(
     };
   } catch (err) {
     // On Redis error, allow the request (fail open)
-    console.error("Rate limit check failed:", err);
+    const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
+    logger.error({ ipHash, endpoint }, err, "Rate limit check failed");
     return {
       allowed: true,
       remaining: limit,

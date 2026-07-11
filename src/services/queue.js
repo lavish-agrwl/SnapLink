@@ -1,6 +1,7 @@
 const { Queue } = require("bullmq");
 const crypto = require("crypto");
 const geoip = require("geoip-lite");
+const logger = require("../lib/logger");
 const { buildClickEventPayload } = require("../validation/clickEvent");
 
 const CLICK_EVENTS_QUEUE = "click-events";
@@ -29,7 +30,7 @@ function getQueue(queueName, redisConnection) {
     });
 
     queue.on("error", (err) => {
-      console.error(`Queue ${queueName} error:`, err);
+      logger.error({ queueName }, err, "Queue error");
     });
 
     queues.set(queueName, queue);
@@ -91,32 +92,33 @@ async function enqueueClick(queue, slug, req, timestamp = new Date()) {
       const geo = geoip.lookup(clientIp);
       country = geo ? geo.country : null;
     } catch (err) {
-      console.error("GeoIP lookup failed:", err);
+      logger.warn({ ipHash }, err, "GeoIP lookup failed");
     }
   }
 
   // 3. Use "unknown" sentinel for missing/failed lookups
   country = country || "unknown";
 
-  try {
-    // Fire-and-forget: don't await, add to queue without blocking
-    const payload = buildClickEventPayload({
-      slug,
-      timestamp,
-      ipHash,
-      userAgent,
-      referrer,
-      country,
-    });
+    const jobId = `${slug}-${timestamp.getTime()}`;
+    try {
+      // Fire-and-forget: don't await, add to queue without blocking
+      const payload = buildClickEventPayload({
+        slug,
+        timestamp,
+        ipHash,
+        userAgent,
+        referrer,
+        country,
+      });
 
-    queue.add("click", payload, {
-      // Unique job ID per slug+timestamp to prevent duplicates
-      jobId: `${slug}-${timestamp.getTime()}`,
-    });
-  } catch (err) {
-    // Queue enqueue failure is non-critical; log and continue
-    console.error("Failed to enqueue click event:", err);
-  }
+      queue.add("click", payload, {
+        jobId,
+      });
+    } catch (err) {
+      // Queue enqueue failure is non-critical; log and continue
+      logger.error({ slug, jobId, ipHash }, err, "Failed to enqueue click event");
+    }
+
 }
 
 module.exports = {

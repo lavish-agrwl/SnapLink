@@ -1,7 +1,13 @@
 const Url = require("../models/url");
+const logger = require("../lib/logger");
 
 async function createUrl(urlInput) {
-  return Url.create(urlInput);
+  try {
+    return await Url.create(urlInput);
+  } catch (err) {
+    logger.error({ urlInput, err }, "Database error creating URL");
+    throw err;
+  }
 }
 
 async function findUrlBySlug(slug) {

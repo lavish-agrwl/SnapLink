@@ -1,6 +1,7 @@
 const { Queue, Worker } = require("bullmq");
 const { CLICK_EVENTS_DLQ } = require("./queue");
 const { bulkIncrementUrlClicks, createClicksBatch } = require("../data");
+const logger = require("../lib/logger");
 
 const DEFAULT_BATCH_SIZE = 50;
 const DEFAULT_FLUSH_INTERVAL_MS = 5000;
@@ -118,7 +119,7 @@ function createClickBatchWorker(queueName, redisConnection, options = {}) {
         jobId: `failed-${job.id}`,
       });
     } catch (dlqErr) {
-      console.error("Failed to route click job to DLQ:", dlqErr);
+      logger.error({ originalJobId: job.id }, dlqErr, "Failed to route click job to DLQ");
     }
   });
 
@@ -127,10 +128,7 @@ function createClickBatchWorker(queueName, redisConnection, options = {}) {
     state,
     flushBatch: () => flushBatch(state),
     close: async (timeoutMs = DEFAULT_SHUTDOWN_TIMEOUT_MS) => {
-      console.log(JSON.stringify({
-        event: "worker_shutdown_start",
-        timestamp: new Date().toISOString(),
-      }));
+      logger.debug({ event: "worker_shutdown_start" }, "Worker shutdown started");
 
       const shutdownPromise = (async () => {
         if (state.flushTimer) {
@@ -155,22 +153,14 @@ function createClickBatchWorker(queueName, redisConnection, options = {}) {
 
       try {
         await Promise.race([shutdownPromise, timeoutPromise]);
-        console.log(JSON.stringify({
-          event: "worker_shutdown_complete",
-          timestamp: new Date().toISOString(),
-        }));
+        logger.debug({ event: "worker_shutdown_complete" }, "Worker shutdown complete");
       } catch (err) {
         const pendingCount = state.pendingJobs.length;
         const inFlightCount = state.currentBatch ? state.currentBatch.length : 0;
         const lostEvents = pendingCount + inFlightCount;
-
-        console.error(JSON.stringify({
-          event: "worker_shutdown_failed",
-          error: err.message,
-          lostEvents,
-          timestamp: new Date().toISOString(),
-        }));
+        logger.error({ event: "worker_shutdown_failed", lostEvents }, err, "Worker shutdown failed");
       }
+
     },
   };
 }

@@ -1,4 +1,5 @@
 const { findActiveUrlBySlug } = require("../data/urlRepository");
+const logger = require("../lib/logger");
 
 const REDIRECT_CACHE_TTL_SECONDS = 86400; // 24 hours
 
@@ -34,6 +35,7 @@ async function getRedirectUrl(slug, cacheClient, now = new Date()) {
 
       return originalUrl;
     } catch (_err) {
+      logger.warn({ slug }, "Malformed cache entry for redirect");
       // Malformed cache entry; treat as miss
     }
   }
@@ -55,7 +57,9 @@ async function getRedirectUrl(slug, cacheClient, now = new Date()) {
     JSON.stringify(metadata),
     "EX",
     REDIRECT_CACHE_TTL_SECONDS,
-  );
+  ).catch((err) => {
+    logger.warn({ slug, err }, "Failed to repopulate redirect cache");
+  });
 
   return urlRecord.originalUrl;
 }
