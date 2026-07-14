@@ -56,3 +56,15 @@
 - [x] Add integration tests for shorten, redirect, analytics, and health endpoint behavior.
 - [x] Add GitHub Actions to run linting, tests, and the production build on pushes to `main`.
 - [ ] Add production deployment configuration for Railway backend services and the Vercel dashboard build.
+
+## Phase 9: Modernized Dashboard
+
+- [ ] Restructure project into `/backend` and `/frontend` directories.
+- [ ] Initialize Vite + React + TypeScript project in `/frontend`.
+- [ ] Configure Tailwind CSS and ShadCN UI components.
+- [ ] Implement React Query hooks for URLs, analytics, and shortening with optimistic UI updates.
+- [ ] Build the main dashboard with ShadCN Table for live link tracking and a shortening form.
+- [ ] Implement per-link analytics view with Chart.js and ShadCN metric cards.
+- [ ] Add system health polling badge in the navigation bar.
+- [ ] Configure CORS in the backend to allow the frontend dev server.
+- [ ] Set up a production build pipeline to serve the React app via Express.
