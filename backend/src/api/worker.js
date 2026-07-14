@@ -8,6 +8,7 @@ const redisUrl = new URL(env.REDIS_URL);
 const redisConnection = {
   host: redisUrl.hostname || "127.0.0.1",
   port: parseInt(redisUrl.port || "6379", 10),
+  maxRetriesPerRequest: null,
 };
 
 async function start() {
