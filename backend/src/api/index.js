@@ -46,10 +46,12 @@ app.use(express.json());
 if (env.NODE_ENV === "production") {
   app.use(cors({ origin: env.BASE_URL }));
 } else {
-  app.use(cors({
-    origin: ["http://localhost:5173", env.BASE_URL],
-    credentials: true,
-  }));
+  app.use(
+    cors({
+      origin: ["http://localhost:5173", env.BASE_URL],
+      credentials: true,
+    }),
+  );
 }
 
 app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
@@ -146,13 +148,19 @@ app.get("/api/analytics/:slug", async (req, res) => {
     }
     res.json(analytics);
   } catch (err) {
-    logger.error({ slug: req.params.slug, err }, "Failed to retrieve analytics");
+    logger.error(
+      { slug: req.params.slug, err },
+      "Failed to retrieve analytics",
+    );
     res.status(500).json({ error: "Failed to retrieve analytics" });
   }
 });
 
 app.get("/api/urls", async (req, res) => {
-  logger.info({ limit: req.query.limit, skip: req.query.skip }, "Fetching URLs list");
+  logger.info(
+    { limit: req.query.limit, skip: req.query.skip },
+    "Fetching URLs list",
+  );
   try {
     const limit = parseInt(req.query.limit, 10) || 100;
     const skip = parseInt(req.query.skip, 10) || 0;
@@ -160,7 +168,10 @@ app.get("/api/urls", async (req, res) => {
     logger.info({ count: urls.length }, "Successfully retrieved URLs list");
     res.json(urls);
   } catch (err) {
-    logger.error({ limit: req.query.limit, skip: req.query.skip, err }, "Failed to retrieve URLs");
+    logger.error(
+      { limit: req.query.limit, skip: req.query.skip, err },
+      "Failed to retrieve URLs",
+    );
     res.status(500).json({ error: "Failed to retrieve URLs" });
   }
 });
@@ -206,6 +217,25 @@ const port = constants.APP.PORT;
 
 const server = app.listen(port, "0.0.0.0", () => {
   logger.info({ port, env: env.NODE_ENV }, "API listening on 0.0.0.0");
+});
+
+// Graceful shutdown handlers
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception - process exiting");
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error({ reason, promise }, "Unhandled rejection - process exiting");
+  process.exit(1);
+});
+
+server.on("error", (err) => {
+  logger.error({ err }, "Server error");
+});
+
+server.on("close", () => {
+  logger.info("Server closed");
 });
 
 mongoose
