@@ -44,7 +44,10 @@ app.use(express.json());
 if (env.NODE_ENV === "production") {
   app.use(cors({ origin: env.BASE_URL }));
 } else {
-  app.use(cors());
+  app.use(cors({
+    origin: ["http://localhost:5173", env.BASE_URL],
+    credentials: true,
+  }));
 }
 
 app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
