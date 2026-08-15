@@ -2,6 +2,8 @@
 
 SnapLink is a full-stack URL shortener with a React dashboard, cache-first redirects, and asynchronous click analytics.
 
+**Live demo:** [snaplink-by-lavish.vercel.app](https://snaplink-by-lavish.vercel.app/)
+
 ## Features
 
 - Create short URLs with generated Base62 slugs or custom alphanumeric slugs.
@@ -28,9 +30,10 @@ SnapLink is a full-stack URL shortener with a React dashboard, cache-first redir
 | --- | --- |
 | Frontend | React, TypeScript, Vite, Tailwind CSS, React Query, Chart.js |
 | API | Node.js, Express, Zod |
-| Data | MongoDB and Mongoose |
-| Cache and queues | Redis and BullMQ |
-| Operations | Docker Compose, Bull Board, Helmet, Morgan |
+| Data | MongoDB Atlas (managed), Mongoose |
+| Cache and queues | Redis, BullMQ |
+| Infrastructure | AWS EC2, Docker Compose, Nginx, Let's Encrypt (Certbot) |
+| Operations | Bull Board, Helmet, Morgan, GitHub Actions (CI) |
 
 ## Architecture
 
@@ -50,12 +53,31 @@ flowchart TD
     API -->|301 redirect| Destination[Original URL]
 ```
 
+## Deployment
+
+**Frontend** is deployed on [Vercel](https://vercel.com), served from `frontend/`, live at [snaplink-by-lavish.vercel.app](https://snaplink-by-lavish.vercel.app/).
+
+**Backend** (API + worker + Redis) runs on an AWS EC2 instance (Ubuntu, t3.micro) via Docker Compose. Nginx reverse-proxies HTTPS traffic to the containerized API, with TLS certificates from Let's Encrypt via Certbot. **MongoDB** is hosted on MongoDB Atlas (managed, free tier) rather than self-hosted.
+
+```
+Vercel (frontend) → HTTPS → Nginx (EC2) → Express API + BullMQ worker (Docker) → Redis (Docker) / MongoDB Atlas
+```
+
+To deploy your own instance:
+1. Provision an EC2 instance and install Docker + Docker Compose.
+2. Clone this repo and create `backend/.env` with production values (see table below) — including an Atlas `MONGODB_URI`.
+3. Run `docker compose up -d --build` from the repo root.
+4. Set up Nginx as a reverse proxy to the API container's port, and obtain a TLS certificate with Certbot for your domain.
+5. Deploy `frontend/` to Vercel (or any static host), setting `VITE_API_URL` to your backend's public HTTPS URL.
+
 ## Local development
 
 ### Prerequisites
 
 - Node.js 20.19 or later
-- Docker and Docker Compose (for MongoDB and Redis)
+- Docker and Docker Compose (for Redis; MongoDB Atlas is used even in local dev — see note below)
+
+> **Note:** This repo's `docker-compose.yml` is configured for production (Redis only; MongoDB runs on Atlas). For local development, either point `MONGODB_URI` at a free Atlas cluster (simplest — no local Mongo needed), or run a local MongoDB container separately alongside this compose file.
 
 ### 1. Configure the backend
 
@@ -68,19 +90,20 @@ cp .env.example backend/.env
 Update `backend/.env` for local development:
 
 ```dotenv
-MONGODB_URI=mongodb://localhost:27017/url-shortener
+MONGODB_URI=<your-atlas-connection-string-or-local-mongo-uri>
 REDIS_URL=redis://localhost:6379
 BASE_URL=http://localhost:3000
 FRONTEND_URL=http://localhost:5173
 NODE_ENV=development
+ADMIN_PASSWORD=<a-long-unique-password>
 ```
 
-Install backend dependencies and start MongoDB and Redis:
+Install backend dependencies and start Redis:
 
 ```bash
 cd backend
 npm install
-docker-compose up -d mongo redis
+docker compose up -d redis
 ```
 
 In one terminal, start the API:
@@ -119,19 +142,20 @@ Open the address Vite prints (normally `http://localhost:5173`).
 
 ### Backend (`backend/.env`)
 
-| Variable | Required | Description | Local example |
-| --- | --- | --- | --- |
-| `MONGODB_URI` | Yes | MongoDB connection string | `mongodb://localhost:27017/url-shortener` |
-| `REDIS_URL` | Yes | Redis connection string | `redis://localhost:6379` |
-| `BASE_URL` | Yes | Public backend URL used in generated short links | `http://localhost:3000` |
-| `FRONTEND_URL` | Yes | Allowed frontend origin for CORS | `http://localhost:5173` |
-| `NODE_ENV` | No | `development`, `test`, or `production` | `development` |
+| Variable | Required | Description | Local example | Production example |
+| --- | --- | --- | --- | --- |
+| `MONGODB_URI` | Yes | MongoDB connection string | `mongodb://localhost:27017/url-shortener` | `mongodb+srv://user:pass@cluster.mongodb.net/url-shortener` |
+| `REDIS_URL` | Yes | Redis connection string | `redis://localhost:6379` | `redis://redis:6379` |
+| `BASE_URL` | Yes | Public backend URL used in generated short links | `http://localhost:3000` | `https://snaplink.lavishagrwl.dev` |
+| `FRONTEND_URL` | Yes | Allowed frontend origin for CORS | `http://localhost:5173` | `https://snaplink-by-lavish.vercel.app` |
+| `ADMIN_PASSWORD` | Yes | Password for the Bull Board admin login | `a-long-unique-password` | `<stored-secret>` |
+| `NODE_ENV` | No | `development`, `test`, or `production` | `development` | `production` |
 
 ### Frontend (`frontend/.env`)
 
-| Variable | Required | Description | Local example |
-| --- | --- | --- | --- |
-| `VITE_API_URL` | No | Backend base URL used for API requests and the frontend redirect route; defaults to `http://localhost:3000` | `http://localhost:3000` |
+| Variable | Required | Description | Local example | Production example |
+| --- | --- | --- | --- | --- |
+| `VITE_API_URL` | No | Backend base URL used for API requests and the frontend redirect route; defaults to `http://localhost:3000` | `http://localhost:3000` | `https://snaplink.lavishagrwl.dev` |
 
 ## API endpoints
 
@@ -142,7 +166,8 @@ Open the address Vite prints (normally `http://localhost:5173`).
 | `GET` | `/api/analytics/:slug` | Get analytics for a short URL. |
 | `GET` | `/:slug` | Redirect to the original URL with `301 Moved Permanently`. |
 | `GET` | `/health` | Report MongoDB, Redis, and queue health. |
-| `GET` | `/admin/queues` | Open the Bull Board queue dashboard. |
+| `GET` / `POST` | `/admin/login` | Password login for the admin area. |
+| `GET` | `/admin/queues` | Authenticated Bull Board queue dashboard. |
 
 Common error responses are `400` for invalid input, `404` for missing or expired slugs, `409` for an already-used custom slug, `429` for rate limits, and `503` when a dependency is unavailable.
 
@@ -170,7 +195,3 @@ Run these inside `frontend/`.
 | `npm run build` | Type-check and create a production build. |
 | `npm run lint` | Lint frontend code. |
 | `npm run preview` | Preview the production build locally. |
-
-## Deployment
-
-Deploy the Express API and worker as separate Node.js services, backed by managed MongoDB and Redis. Deploy `frontend/` as a static Vite site. Configure the backend `BASE_URL` to its public URL, set `FRONTEND_URL` to the deployed frontend origin, and set the frontend `VITE_API_URL` to the public backend URL.
