@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-
-const REDIRECT_BASE_URL =
-  import.meta.env.VITE_BASE_URL || "https://snaplink.up.railway.app";
+import { API_BASE_URL } from "../lib/api";
 
 export default function RedirectView() {
   const { slug } = useParams<{ slug: string }>();
@@ -10,7 +8,7 @@ export default function RedirectView() {
   useEffect(() => {
     if (!slug) return;
 
-    const redirectUrl = `${REDIRECT_BASE_URL.replace(/\/$/, "")}/${encodeURIComponent(slug)}`;
+    const redirectUrl = `${API_BASE_URL.replace(/\/$/, "")}/${encodeURIComponent(slug)}`;
     window.location.replace(redirectUrl);
   }, [slug]);
 

@@ -103,7 +103,6 @@ Create `frontend/.env` to point the dashboard and redirect route at the backend:
 
 ```dotenv
 VITE_API_URL=http://localhost:3000
-VITE_BASE_URL=http://localhost:3000
 ```
 
 Then install dependencies and run Vite:
@@ -132,8 +131,7 @@ Open the address Vite prints (normally `http://localhost:5173`).
 
 | Variable | Required | Description | Local example |
 | --- | --- | --- | --- |
-| `VITE_API_URL` | No | Backend API base URL; defaults to `http://localhost:3000` | `http://localhost:3000` |
-| `VITE_BASE_URL` | No | Backend URL used by the frontend redirect route | `http://localhost:3000` |
+| `VITE_API_URL` | No | Backend base URL used for API requests and the frontend redirect route; defaults to `http://localhost:3000` | `http://localhost:3000` |
 
 ## API endpoints
 
@@ -175,4 +173,4 @@ Run these inside `frontend/`.
 
 ## Deployment
 
-Deploy the Express API and worker as separate Node.js services, backed by managed MongoDB and Redis. Deploy `frontend/` as a static Vite site. Configure the backend `BASE_URL` to its public URL, set `FRONTEND_URL` to the deployed frontend origin, and set the frontend `VITE_API_URL` and `VITE_BASE_URL` to the public backend URL.
+Deploy the Express API and worker as separate Node.js services, backed by managed MongoDB and Redis. Deploy `frontend/` as a static Vite site. Configure the backend `BASE_URL` to its public URL, set `FRONTEND_URL` to the deployed frontend origin, and set the frontend `VITE_API_URL` to the public backend URL.
