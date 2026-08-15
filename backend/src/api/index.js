@@ -11,6 +11,7 @@ const constants = require("../config/constants");
 const { getHealthStatus } = require("../services/health");
 const { getRedisClient } = require("../services/redisClient");
 const { createQueueBoard } = require("../services/bullBoard");
+const { createAdminAuth } = require("../services/adminAuth");
 const { createShortUrl } = require("../services/shorten");
 const { getRedirectUrl } = require("../services/redirect");
 const { getAnalytics } = require("../services/analytics");
@@ -37,9 +38,23 @@ const redisConnection = new IORedis(
   constants.REDIS.CONNECTION_OPTIONS,
 );
 const { clickQueue, clickDlq } = getClickQueues(redisConnection);
+const adminAuth = createAdminAuth({
+  password: env.ADMIN_PASSWORD,
+  isProduction: env.NODE_ENV === "production",
+});
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 app.use(helmet());
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 if (env.NODE_ENV === "production") {
   app.use(cors({ origin: env.FRONTEND_URL }));
@@ -56,7 +71,43 @@ app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
 
 app.get("/", (req, res) => res.json({ status: "ok" }));
 
-app.use("/admin/queues", createQueueBoard({ clickQueue, clickDlq }));
+app.get("/admin/login", (req, res) => {
+  if (adminAuth.isAuthenticated(req)) {
+    return res.redirect(303, adminAuth.getReturnTo(req.query.returnTo));
+  }
+
+  const returnTo = adminAuth.getReturnTo(req.query.returnTo);
+  const error = req.query.error ? "Incorrect password." : "";
+  return res.type("html").send(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Admin login</title></head>
+<body><main><h1>Admin login</h1>${error ? `<p role="alert">${error}</p>` : ""}
+<form method="post" action="/admin/login">
+<input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}">
+<label>Password <input type="password" name="password" autocomplete="current-password" required autofocus></label>
+<button type="submit">Sign in</button>
+</form></main></body></html>`);
+});
+
+app.post("/admin/login", (req, res) => {
+  const returnTo = adminAuth.getReturnTo(req.body.returnTo);
+  if (!adminAuth.safeEqual(req.body.password || "", env.ADMIN_PASSWORD)) {
+    return res.redirect(303, `/admin/login?error=1&returnTo=${encodeURIComponent(returnTo)}`);
+  }
+
+  adminAuth.setSession(res);
+  return res.redirect(303, returnTo);
+});
+
+app.post("/admin/logout", (req, res) => {
+  adminAuth.clearSession(res);
+  res.redirect(303, "/admin/login");
+});
+
+app.use(
+  "/admin/queues",
+  adminAuth.requireAuth,
+  createQueueBoard({ clickQueue, clickDlq }),
+);
 
 app.post("/api/shorten", async (req, res) => {
   const clientIp = getClientIp(req);

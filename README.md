@@ -95,6 +95,7 @@ REDIS_URL=redis://localhost:6379
 BASE_URL=http://localhost:3000
 FRONTEND_URL=http://localhost:5173
 NODE_ENV=development
+ADMIN_PASSWORD=<a-long-unique-password>
 ```
 
 Install backend dependencies and start Redis:
@@ -147,6 +148,7 @@ Open the address Vite prints (normally `http://localhost:5173`).
 | `REDIS_URL` | Yes | Redis connection string | `redis://localhost:6379` | `redis://redis:6379` |
 | `BASE_URL` | Yes | Public backend URL used in generated short links | `http://localhost:3000` | `https://snaplink.lavishagrwl.dev` |
 | `FRONTEND_URL` | Yes | Allowed frontend origin for CORS | `http://localhost:5173` | `https://snaplink-by-lavish.vercel.app` |
+| `ADMIN_PASSWORD` | Yes | Password for the Bull Board admin login | `a-long-unique-password` | `<stored-secret>` |
 | `NODE_ENV` | No | `development`, `test`, or `production` | `development` | `production` |
 
 ### Frontend (`frontend/.env`)
@@ -164,6 +166,8 @@ Open the address Vite prints (normally `http://localhost:5173`).
 | `GET` | `/api/analytics/:slug` | Get analytics for a short URL. |
 | `GET` | `/:slug` | Redirect to the original URL with `301 Moved Permanently`. |
 | `GET` | `/health` | Report MongoDB, Redis, and queue health. |
+| `GET` / `POST` | `/admin/login` | Password login for the admin area. |
+| `GET` | `/admin/queues` | Authenticated Bull Board queue dashboard. |
 
 Common error responses are `400` for invalid input, `404` for missing or expired slugs, `409` for an already-used custom slug, `429` for rate limits, and `503` when a dependency is unavailable.
 
