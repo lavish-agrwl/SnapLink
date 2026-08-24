@@ -57,4 +57,18 @@ describe('Rate limiter', () => {
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(10);
   });
+
+  test('uses a route-specific rate-limit window', async () => {
+    const redis = createMockRedis(1);
+    const result = await checkRateLimit(
+      redis,
+      '1.2.3.4',
+      'admin-login',
+      5,
+      fixedNow,
+      15 * 60 * 1000,
+    );
+
+    expect(result.resetAt).toBe(fixedNow.getTime() + (15 * 60 * 1000));
+  });
 });

@@ -18,7 +18,7 @@ describe("admin authentication", () => {
 
     expect(response.redirect).toHaveBeenCalledWith(
       303,
-      "/admin/login?returnTo=%2Fadmin%2Fqueues",
+      "/admin/login",
     );
     expect(next).not.toHaveBeenCalled();
   });

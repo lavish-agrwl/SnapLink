@@ -28,12 +28,6 @@ function getCookie(req, name) {
     ?.slice(prefix.length);
 }
 
-function getReturnTo(value) {
-  return typeof value === "string" && value.startsWith("/admin/")
-    ? value
-    : "/admin/queues";
-}
-
 function createAdminAuth({ password, isProduction = false }) {
   function isAuthenticated(req) {
     const token = getCookie(req, COOKIE_NAME);
@@ -60,7 +54,7 @@ function createAdminAuth({ password, isProduction = false }) {
   function requireAuth(req, res, next) {
     if (isAuthenticated(req)) return next();
 
-    return res.redirect(303, `/admin/login?returnTo=${encodeURIComponent(req.originalUrl)}`);
+    return res.redirect(303, "/admin/login");
   }
 
   return {
@@ -68,7 +62,6 @@ function createAdminAuth({ password, isProduction = false }) {
     isAuthenticated,
     requireAuth,
     setSession,
-    getReturnTo,
     safeEqual,
   };
 }

@@ -3,15 +3,15 @@ const helmet = require("helmet");
 const cors = require("cors");
 const morgan = require("morgan");
 const mongoose = require("mongoose");
-const path = require("path");
 const IORedis = require("ioredis");
 
 const { loadEnv } = require("../config/env");
 const constants = require("../config/constants");
 const { getHealthStatus } = require("../services/health");
 const { getRedisClient } = require("../services/redisClient");
-const { createQueueBoard } = require("../services/bullBoard");
 const { createAdminAuth } = require("../services/adminAuth");
+const { registerAdminRoutes } = require("./adminRoutes");
+const { createRateLimitMiddleware } = require("../middleware/rateLimit");
 const { createShortUrl } = require("../services/shorten");
 const { getRedirectUrl } = require("../services/redirect");
 const { getAnalytics } = require("../services/analytics");
@@ -20,14 +20,9 @@ const { listUrls } = require("../services/urlList");
 const {
   getClickQueues,
   enqueueClick,
-  getClientIp,
 } = require("../services/queue");
 const logger = require("../lib/logger");
-const {
-  checkRateLimit,
-  setRateLimitHeaders,
-  RATE_LIMITS,
-} = require("../services/rateLimiter");
+const { RATE_LIMITS } = require("../services/rateLimiter");
 
 const env = loadEnv(process.env);
 
@@ -42,15 +37,7 @@ const adminAuth = createAdminAuth({
   password: env.ADMIN_PASSWORD,
   isProduction: env.NODE_ENV === "production",
 });
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+const rateLimit = createRateLimitMiddleware(redisClient);
 
 app.use(helmet());
 app.use(express.json());
@@ -71,65 +58,20 @@ app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
 
 app.get("/", (req, res) => res.json({ status: "ok" }));
 
-app.get("/admin/login", (req, res) => {
-  if (adminAuth.isAuthenticated(req)) {
-    return res.redirect(303, adminAuth.getReturnTo(req.query.returnTo));
-  }
-
-  const returnTo = adminAuth.getReturnTo(req.query.returnTo);
-  const error = req.query.error ? "Incorrect password." : "";
-  return res.type("html").send(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Admin login</title></head>
-<body><main><h1>Admin login</h1>${error ? `<p role="alert">${error}</p>` : ""}
-<form method="post" action="/admin/login">
-<input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}">
-<label>Password <input type="password" name="password" autocomplete="current-password" required autofocus></label>
-<button type="submit">Sign in</button>
-</form></main></body></html>`);
+registerAdminRoutes(app, {
+  adminAuth,
+  adminPassword: env.ADMIN_PASSWORD,
+  clickQueue,
+  clickDlq,
+  rateLimit,
+  rateLimits: RATE_LIMITS,
 });
 
-app.post("/admin/login", (req, res) => {
-  const returnTo = adminAuth.getReturnTo(req.body.returnTo);
-  if (!adminAuth.safeEqual(req.body.password || "", env.ADMIN_PASSWORD)) {
-    return res.redirect(303, `/admin/login?error=1&returnTo=${encodeURIComponent(returnTo)}`);
-  }
-
-  adminAuth.setSession(res);
-  return res.redirect(303, returnTo);
-});
-
-app.post("/admin/logout", (req, res) => {
-  adminAuth.clearSession(res);
-  res.redirect(303, "/admin/login");
-});
-
-app.use(
-  "/admin/queues",
-  adminAuth.requireAuth,
-  createQueueBoard({ clickQueue, clickDlq }),
-);
-
-app.post("/api/shorten", async (req, res) => {
-  const clientIp = getClientIp(req);
-  const now = new Date();
-  const rateLimitResult = await checkRateLimit(
-    redisClient,
-    clientIp,
-    "shorten",
-    RATE_LIMITS.shorten.limit,
-    now,
-  );
-
-  setRateLimitHeaders(res, rateLimitResult, RATE_LIMITS.shorten.limit);
-
-  if (!rateLimitResult.allowed) {
-    return res.status(429).json({ error: "Rate limit exceeded" });
-  }
-
+app.post("/api/shorten", rateLimit("shorten", RATE_LIMITS.shorten), async (req, res) => {
   try {
     const shortened = await createShortUrl(req.body, {
       baseUrl: env.BASE_URL,
-      now,
+      now: req.rateLimitNow,
       cacheClient: redisClient,
     });
 
@@ -173,25 +115,13 @@ app.get("/health", async (req, res) => {
   }
 });
 
-app.get("/api/analytics/:slug", async (req, res) => {
-  const clientIp = getClientIp(req);
-  const now = new Date();
-  const rateLimitResult = await checkRateLimit(
-    redisClient,
-    clientIp,
-    "analytics",
-    RATE_LIMITS.analytics.limit,
-    now,
-  );
-  setRateLimitHeaders(res, rateLimitResult, RATE_LIMITS.analytics.limit);
-
-  if (!rateLimitResult.allowed) {
-    return res.status(429).json({ error: "Rate limit exceeded" });
-  }
-
+app.get("/api/analytics/:slug", rateLimit("analytics", RATE_LIMITS.analytics), async (req, res) => {
   try {
     const { slug } = req.params;
-    const analytics = await getAnalytics(slug, { redisClient, now });
+    const analytics = await getAnalytics(slug, {
+      redisClient,
+      now: req.rateLimitNow,
+    });
     if (!analytics) {
       return res.status(404).json({ error: "Slug not found or expired" });
     }
@@ -225,23 +155,7 @@ app.get("/api/urls", async (req, res) => {
   }
 });
 
-app.get("/:slug", async (req, res) => {
-  const clientIp = getClientIp(req);
-  const now = new Date();
-  const rateLimitResult = await checkRateLimit(
-    redisClient,
-    clientIp,
-    "redirect",
-    RATE_LIMITS.redirect.limit,
-    now,
-  );
-
-  setRateLimitHeaders(res, rateLimitResult, RATE_LIMITS.redirect.limit);
-
-  if (!rateLimitResult.allowed) {
-    return res.status(429).json({ error: "Rate limit exceeded" });
-  }
-
+app.get("/:slug", rateLimit("redirect", RATE_LIMITS.redirect), async (req, res) => {
   try {
     const { slug } = req.params;
     const originalUrl = await getRedirectUrl(slug, redisClient);
