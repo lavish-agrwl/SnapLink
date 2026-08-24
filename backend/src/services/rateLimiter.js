@@ -18,6 +18,7 @@ const constants = require("../config/constants");
  * @param {string} endpoint - Endpoint identifier (e.g., 'redirect', 'shorten')
  * @param {number} limit - Max requests allowed in the window
  * @param {Date} [now] - Current time (defaults to now)
+ * @param {number} [windowMs] - Window duration in milliseconds
  * @returns {Promise<{allowed: boolean, remaining: number, resetAt: number}>}
  */
 async function checkRateLimit(
@@ -26,10 +27,11 @@ async function checkRateLimit(
   endpoint,
   limit,
   now = new Date(),
+  windowMs = constants.RATE_LIMIT.WINDOW_SIZE_MS,
 ) {
   const nowMs = now.getTime();
   const key = `rl:${ip}:${endpoint}`;
-  const windowStart = nowMs - constants.RATE_LIMIT.WINDOW_SIZE_MS;
+  const windowStart = nowMs - windowMs;
 
   try {
     // Use pipeline for atomic operations
@@ -45,7 +47,7 @@ async function checkRateLimit(
     pipeline.zcard(key);
 
     // Set expiry
-    pipeline.expire(key, constants.RATE_LIMIT.REDIS_EXPIRY);
+    pipeline.expire(key, Math.ceil((windowMs * 2) / 1000));
 
     const results = await pipeline.exec();
 
@@ -54,7 +56,7 @@ async function checkRateLimit(
 
     const allowed = requestCount <= limit;
     const remaining = Math.max(0, limit - requestCount);
-    const resetAt = nowMs + constants.RATE_LIMIT.WINDOW_SIZE_MS;
+    const resetAt = nowMs + windowMs;
 
     return {
       allowed,
@@ -68,7 +70,7 @@ async function checkRateLimit(
     return {
       allowed: true,
       remaining: limit,
-      resetAt: now.getTime() + constants.RATE_LIMIT.WINDOW_SIZE_MS,
+      resetAt: now.getTime() + windowMs,
     };
   }
 }

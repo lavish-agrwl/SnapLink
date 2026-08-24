@@ -48,6 +48,14 @@ module.exports = {
         limit: 30,
         windowMs: 60 * 1000,
       },
+      admin: {
+        limit: 120,
+        windowMs: 60 * 1000,
+      },
+      adminLogin: {
+        limit: 5,
+        windowMs: 15 * 60 * 1000,
+      },
     },
   },
   CACHE: {
