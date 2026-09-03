@@ -1,21 +1,24 @@
 import { Routes, Route } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import Navigation from '@/components/Navigation';
-import DashboardView from './views/DashboardView';
+import AppLayout from '@/layouts/AppLayout';
+import LandingView from './views/LandingView';
+import ShortenView from './views/ShortenView';
+import UrlsView from './views/UrlsView';
 import AnalyticsView from './views/AnalyticsView';
 import RedirectView from './views/RedirectView';
+import NotFoundView from './views/NotFoundView';
 
 function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground px-4 pb-4 pt-2 md:px-8 md:pb-8 md:pt-4">
-      <Toaster position="top-right" />
-      <Navigation />
+    <AppLayout>
       <Routes>
-        <Route path="/" element={<DashboardView />} />
+        <Route path="/" element={<LandingView />} />
+        <Route path="/shorten" element={<ShortenView />} />
+        <Route path="/urls" element={<UrlsView />} />
         <Route path="/analytics/:slug" element={<AnalyticsView />} />
         <Route path="/:slug" element={<RedirectView />} />
+        <Route path="*" element={<NotFoundView />} />
       </Routes>
-    </div>
+    </AppLayout>
   );
 }
 
