@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --bun vite",
-    "build": "tsc -b && bun --bun vite build",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "bun --bun vite preview"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
