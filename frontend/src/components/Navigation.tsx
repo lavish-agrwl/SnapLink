@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useHealth } from '@/hooks/useHealth';
 import { cn } from '@/lib/utils';
-import ThemeToggle from '@/components/ThemeToggle';
+
 import { buttonVariants } from '@/components/ui/button';
 import { 
   LinkSimpleIcon, 
@@ -131,9 +131,6 @@ export default function Navigation() {
               </div>
             )}
           </div>
-
-          {/* Theme Switcher */}
-          <ThemeToggle />
 
           {/* Desktop Shorten CTA */}
           <Link

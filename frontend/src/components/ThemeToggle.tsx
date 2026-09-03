@@ -1,17 +1,15 @@
+import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { SunIcon, MoonIcon } from '@phosphor-icons/react';
-import { useSyncExternalStore } from 'react';
-
-const emptySubscribe = () => () => {};
 
 export default function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const mounted = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!mounted) {
     return (

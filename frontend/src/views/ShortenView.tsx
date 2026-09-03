@@ -203,7 +203,7 @@ export default function ShortenView() {
       )}
 
       {/* Main Shorten Form */}
-      <Card className="border">
+      <Card className="border overflow-visible">
         <CardHeader className="border-b pb-4">
           <CardTitle className="text-base font-semibold">Link Configuration</CardTitle>
           <CardDescription className="text-xs">

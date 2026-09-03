@@ -12,7 +12,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
       <Toaster position="top-right" />
       <Navigation />
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6 md:px-8 md:py-8 flex flex-col">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12 md:px-10 md:py-12 flex flex-col gap-6 bg-gray-50 dark:bg-gray-900">
         {children}
       </main>
       <Footer />
