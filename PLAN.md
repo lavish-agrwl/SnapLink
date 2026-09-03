@@ -74,6 +74,6 @@
 - [x] Build shared App Layout with modern navigation, route links, health badge, theme switcher, and mobile menu.
 - [x] Create modern Landing Page with project overview, live system stats, architecture flow, and quick links.
 - [x] Create dedicated Shorten Page with descriptive form and custom calendar widget with TTL date/time selection.
-- [ ] Create dedicated All URLs Page with search, status filtering, and link action controls.
+- [x] Create dedicated All URLs Page with search, status filtering, and link action controls.
 - [ ] Refine Analytics view and add custom 404 Not Found page for unknown routes.
 - [ ] Verify frontend build, typechecking, linting, and multi-page routing.
