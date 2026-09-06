@@ -151,28 +151,28 @@ export default function CalendarWidget({ value, onChange, className }: CalendarW
         <button
           type="button"
           onClick={() => applyPreset(1)}
-          className="px-2 py-0.5 rounded-none border text-[11px] hover:bg-muted font-medium transition-colors cursor-pointer"
+          className="px-2 py-0.5 rounded-lg border text-[11px] hover:bg-muted font-medium transition-colors cursor-pointer"
         >
           +1 Hour
         </button>
         <button
           type="button"
           onClick={() => applyPreset(24)}
-          className="px-2 py-0.5 rounded-none border text-[11px] hover:bg-muted font-medium transition-colors cursor-pointer"
+          className="px-2 py-0.5 rounded-lg border text-[11px] hover:bg-muted font-medium transition-colors cursor-pointer"
         >
           +24 Hours
         </button>
         <button
           type="button"
           onClick={() => applyPreset(24 * 7)}
-          className="px-2 py-0.5 rounded-none border text-[11px] hover:bg-muted font-medium transition-colors cursor-pointer"
+          className="px-2 py-0.5 rounded-lg border text-[11px] hover:bg-muted font-medium transition-colors cursor-pointer"
         >
           +7 Days
         </button>
         <button
           type="button"
           onClick={() => applyPreset(24 * 30)}
-          className="px-2 py-0.5 rounded-none border text-[11px] hover:bg-muted font-medium transition-colors cursor-pointer"
+          className="px-2 py-0.5 rounded-lg border text-[11px] hover:bg-muted font-medium transition-colors cursor-pointer"
         >
           +30 Days
         </button>
@@ -180,7 +180,7 @@ export default function CalendarWidget({ value, onChange, className }: CalendarW
           <button
             type="button"
             onClick={clearExpiry}
-            className="px-2 py-0.5 rounded-none border border-destructive/30 text-destructive text-[11px] hover:bg-destructive/10 font-medium transition-colors flex items-center gap-1 cursor-pointer"
+            className="px-2 py-0.5 rounded-lg border border-destructive/30 text-destructive text-[11px] hover:bg-destructive/10 font-medium transition-colors flex items-center gap-1 cursor-pointer"
           >
             <XIcon className="size-3" />
             <span>Never (Permanent)</span>
@@ -195,7 +195,7 @@ export default function CalendarWidget({ value, onChange, className }: CalendarW
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
             className={cn(
-              'flex-1 flex items-center justify-between px-3 py-2 text-xs border rounded-none bg-background text-foreground transition-colors hover:bg-muted/30 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer',
+              'flex-1 flex items-center justify-between px-3 py-2 text-xs border rounded-lg bg-background text-foreground transition-colors hover:bg-muted/30 focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer',
               value && 'border-primary/50'
             )}
           >
@@ -226,7 +226,7 @@ export default function CalendarWidget({ value, onChange, className }: CalendarW
 
         {/* Dropdown Calendar Popover */}
         {isOpen && (
-          <div className="absolute left-0 top-full mt-2 z-50 w-full sm:w-80 p-4 border bg-popover text-popover-foreground shadow-xl rounded-none space-y-4 animate-in fade-in zoom-in-95">
+          <div className="absolute left-0 top-full mt-2 z-50 w-full sm:w-80 p-4 border bg-popover text-popover-foreground shadow-xl rounded-2xl space-y-4 animate-in fade-in zoom-in-95">
             {/* Header: Month and Year navigation */}
             <div className="flex items-center justify-between">
               <span className="font-semibold text-xs font-mono">
@@ -284,7 +284,7 @@ export default function CalendarWidget({ value, onChange, className }: CalendarW
                     disabled={past}
                     onClick={() => handleDaySelect(day)}
                     className={cn(
-                      'p-1.5 text-xs font-mono rounded-none transition-colors relative',
+                      'p-1.5 text-xs font-mono rounded-lg transition-colors relative',
                       past && 'text-muted-foreground/40 cursor-not-allowed line-through',
                       !past && !selected && 'hover:bg-muted text-foreground cursor-pointer',
                       today && !selected && 'border border-primary/40 font-bold',
@@ -316,7 +316,7 @@ export default function CalendarWidget({ value, onChange, className }: CalendarW
                     id="calendar-hours"
                     value={hours}
                     onChange={(e) => handleTimeChange(Number(e.target.value), minutes)}
-                    className="w-full text-xs p-1 border rounded-none bg-background font-mono"
+                    className="w-full text-xs p-1 border rounded-lg bg-background font-mono"
                   >
                     {Array.from({ length: 24 }).map((_, h) => (
                       <option key={h} value={h}>
@@ -332,7 +332,7 @@ export default function CalendarWidget({ value, onChange, className }: CalendarW
                     id="calendar-minutes"
                     value={minutes}
                     onChange={(e) => handleTimeChange(hours, Number(e.target.value))}
-                    className="w-full text-xs p-1 border rounded-none bg-background font-mono"
+                    className="w-full text-xs p-1 border rounded-lg bg-background font-mono"
                   >
                     {[0, 15, 30, 45, 59].map((m) => (
                       <option key={m} value={m}>

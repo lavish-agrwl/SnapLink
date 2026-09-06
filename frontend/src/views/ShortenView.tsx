@@ -1,14 +1,20 @@
-import { useState } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { useShorten } from '@/hooks/useShorten';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import CalendarWidget from '@/components/CalendarWidget';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import type { ShortUrl } from '@/types/api';
+import { useState } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useShorten } from "@/hooks/useShorten";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import CalendarWidget from "@/components/CalendarWidget";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import type { ShortUrl } from "@/types/api";
 import {
   LinkSimpleIcon,
   CopyIcon,
@@ -19,16 +25,16 @@ import {
   PlusIcon,
   CaretRightIcon,
   ClipboardTextIcon,
-} from '@phosphor-icons/react';
+} from "@phosphor-icons/react";
 
 export default function ShortenView() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { mutate: shorten, isPending } = useShorten();
 
-  const [url, setUrl] = useState(() => searchParams.get('url') || '');
-  const [customSlug, setCustomSlug] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
+  const [url, setUrl] = useState(() => searchParams.get("url") || "");
+  const [customSlug, setCustomSlug] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
   const [createdResult, setCreatedResult] = useState<ShortUrl | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -37,10 +43,10 @@ export default function ShortenView() {
       const text = await navigator.clipboard.readText();
       if (text) {
         setUrl(text);
-        toast.info('Pasted URL from clipboard');
+        toast.info("Pasted URL from clipboard");
       }
     } catch {
-      toast.error('Clipboard access not permitted');
+      toast.error("Clipboard access not permitted");
     }
   };
 
@@ -48,17 +54,17 @@ export default function ShortenView() {
     try {
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
-      toast.success('Short link copied to clipboard!');
+      toast.success("Short link copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Failed to copy link');
+      toast.error("Failed to copy link");
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) {
-      toast.error('Destination URL is required');
+      toast.error("Destination URL is required");
       return;
     }
 
@@ -70,20 +76,20 @@ export default function ShortenView() {
       },
       {
         onSuccess: (data) => {
-          toast.success('URL shortened successfully!');
+          toast.success("URL shortened successfully!");
           setCreatedResult(data);
         },
         onError: (error: any) => {
-          toast.error(error.message || 'Failed to shorten URL');
+          toast.error(error.message || "Failed to shorten URL");
         },
-      }
+      },
     );
   };
 
   const handleResetForm = () => {
-    setUrl('');
-    setCustomSlug('');
-    setExpiresAt('');
+    setUrl("");
+    setCustomSlug("");
+    setExpiresAt("");
     setCreatedResult(null);
   };
 
@@ -103,63 +109,81 @@ export default function ShortenView() {
 
       {/* Header */}
       <header className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">Shorten URL</h1>
-        <p className="text-xs text-muted-foreground">
-          Create compact, high-performance links with custom slugs, instant Redis caching, and calendar-based expiration.
+        <h1 className="text-3xl font-bold tracking-tight">Shorten a link</h1>
+        <p className="text-sm text-muted-foreground">
+          Paste your destination, pick an alias if you like, and optionally set
+          an expiry date.
         </p>
       </header>
 
       {/* Creation Result Card (When URL is created) */}
       {createdResult && (
-        <Card className="border-2 border-primary/50 bg-primary/5 shadow-md animate-in fade-in slide-in-from-top-3">
+        <Card className="rounded-2xl border-2 border-primary/40 bg-primary/5 shadow-md animate-in fade-in slide-in-from-top-3">
           <CardHeader className="pb-3 border-b">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="size-6 rounded bg-emerald-500 text-white flex items-center justify-center">
                   <CheckIcon className="size-4" weight="bold" />
                 </div>
-                <CardTitle className="text-sm font-semibold">Your Link is Ready!</CardTitle>
+                <CardTitle className="text-sm font-semibold">
+                  Your Link is Ready!
+                </CardTitle>
               </div>
               <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-muted border">
                 Slug: {createdResult.slug}
               </span>
             </div>
             <CardDescription className="text-xs">
-              This link is live, cached in Redis, and actively recording telemetry.
+              This link is live, cached in Redis, and actively recording
+              telemetry.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="pt-4 space-y-4 text-xs">
             {/* Short Link Display & Copy Button */}
-            <div className="flex items-center gap-2 p-2 rounded-none border bg-background">
+            <div className="flex items-center gap-2 p-2 rounded-xl border bg-background">
               <div className="flex-1 font-mono font-semibold text-primary truncate text-sm px-1">
-                {createdResult.shortUrl || `${currentDomain}/${createdResult.slug}`}
+                {createdResult.shortUrl ||
+                  `${currentDomain}/${createdResult.slug}`}
               </div>
               <Button
                 type="button"
                 size="sm"
                 onClick={() =>
-                  handleCopy(createdResult.shortUrl || `${currentDomain}/${createdResult.slug}`)
+                  handleCopy(
+                    createdResult.shortUrl ||
+                      `${currentDomain}/${createdResult.slug}`,
+                  )
                 }
                 className="gap-1 font-medium shrink-0"
               >
-                {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
+                {copied ? (
+                  <CheckIcon className="size-3.5" />
+                ) : (
+                  <CopyIcon className="size-3.5" />
+                )}
+                <span>{copied ? "Copied" : "Copy"}</span>
               </Button>
             </div>
 
             {/* Destination URL Info */}
             <div className="text-[11px] text-muted-foreground space-y-1 bg-muted/40 p-2.5 border">
               <div>
-                <span className="font-semibold text-foreground">Destination:</span>{' '}
-                <span className="break-all font-mono">{createdResult.originalUrl}</span>
+                <span className="font-semibold text-foreground">
+                  Destination:
+                </span>{" "}
+                <span className="break-all font-mono">
+                  {createdResult.originalUrl}
+                </span>
               </div>
               <div>
-                <span className="font-semibold text-foreground">Expiration:</span>{' '}
+                <span className="font-semibold text-foreground">
+                  Expiration:
+                </span>{" "}
                 <span>
                   {createdResult.expiresAt
                     ? new Date(createdResult.expiresAt).toLocaleString()
-                    : 'Permanent (No expiration set)'}
+                    : "Permanent (No expiration set)"}
                 </span>
               </div>
             </div>
@@ -170,7 +194,10 @@ export default function ShortenView() {
                 href={createdResult.shortUrl || `/${createdResult.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(buttonVariants({ variant: 'outline', size: 'xs' }), 'gap-1')}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "xs" }),
+                  "gap-1",
+                )}
               >
                 <ArrowSquareOutIcon className="size-3.5" />
                 <span>Test Redirect</span>
@@ -203,11 +230,14 @@ export default function ShortenView() {
       )}
 
       {/* Main Shorten Form */}
-      <Card className="border overflow-visible">
+      <Card className="rounded-2xl border bg-card/70 backdrop-blur overflow-visible">
         <CardHeader className="border-b pb-4">
-          <CardTitle className="text-base font-semibold">Link Configuration</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            Link Configuration
+          </CardTitle>
           <CardDescription className="text-xs">
-            Provide the target destination web address and configure optional expiration schedules.
+            Provide the target destination web address and configure optional
+            expiration schedules.
           </CardDescription>
         </CardHeader>
 
@@ -216,8 +246,14 @@ export default function ShortenView() {
             {/* Field 1: Destination URL */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="url" className="text-xs font-semibold flex items-center gap-1.5">
-                  <LinkSimpleIcon className="size-3.5 text-primary" weight="bold" />
+                <Label
+                  htmlFor="url"
+                  className="text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <LinkSimpleIcon
+                    className="size-3.5 text-primary"
+                    weight="bold"
+                  />
                   <span>Destination URL</span>
                   <span className="text-destructive font-mono">*</span>
                 </Label>
@@ -241,16 +277,24 @@ export default function ShortenView() {
                 className="text-xs font-mono"
               />
               <p className="text-[11px] text-muted-foreground">
-                Must include protocol (<code className="font-mono">http://</code> or{' '}
-                <code className="font-mono">https://</code>). This is the original address visitors will be redirected to.
+                Must include protocol (
+                <code className="font-mono">http://</code> or{" "}
+                <code className="font-mono">https://</code>). This is the
+                original address visitors will be redirected to.
               </p>
             </div>
 
             {/* Field 2: Custom Slug (Optional) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="slug" className="text-xs font-semibold flex items-center gap-1.5">
-                  <SparkleIcon className="size-3.5 text-primary" weight="bold" />
+                <Label
+                  htmlFor="slug"
+                  className="text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <SparkleIcon
+                    className="size-3.5 text-primary"
+                    weight="bold"
+                  />
                   <span>Custom Slug Alias</span>
                   <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-muted text-muted-foreground">
                     Optional
@@ -260,7 +304,7 @@ export default function ShortenView() {
 
               <div className="flex items-center">
                 <span className="inline-flex items-center px-2.5 h-8 border border-r-0 bg-muted text-muted-foreground text-[11px] font-mono select-none">
-                  {currentDomain.replace(/^https?:\/\//, '')}/
+                  {currentDomain.replace(/^https?:\/\//, "")}/
                 </span>
                 <Input
                   id="slug"
@@ -271,7 +315,9 @@ export default function ShortenView() {
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                3–30 characters using alphanumeric letters, numbers, or hyphens. If omitted, a collision-resistant Base62 slug is automatically generated.
+                3–30 characters using alphanumeric letters, numbers, or hyphens.
+                If omitted, a collision-resistant Base62 slug is automatically
+                generated.
               </p>
             </div>
 
@@ -289,7 +335,9 @@ export default function ShortenView() {
               <CalendarWidget value={expiresAt} onChange={setExpiresAt} />
 
               <p className="text-[11px] text-muted-foreground">
-                Links automatically deactivate at the scheduled time. When expired, the Redis cache key is invalidated and MongoDB TTL background indexes purge the record.
+                Links automatically deactivate at the scheduled time. When
+                expired, the Redis cache key is invalidated and MongoDB TTL
+                background indexes purge the record.
               </p>
             </div>
 
@@ -308,12 +356,19 @@ export default function ShortenView() {
               <div className="flex items-center gap-3">
                 <Link
                   to="/urls"
-                  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                  )}
                 >
                   View All Links
                 </Link>
-                <Button type="submit" size="default" disabled={isPending || !url.trim()} className="font-semibold">
-                  {isPending ? 'Shortening...' : 'Generate Short Link'}
+                <Button
+                  type="submit"
+                  size="default"
+                  disabled={isPending || !url.trim()}
+                  className="font-semibold"
+                >
+                  {isPending ? "Shortening..." : "Generate Short Link"}
                 </Button>
               </div>
             </div>

@@ -1,20 +1,26 @@
-import { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useUrls } from '@/hooks/useUrls';
-import { useQueryClient } from '@tanstack/react-query';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useUrls } from "@/hooks/useUrls";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -27,9 +33,9 @@ import {
   LinkSimpleIcon,
   CalendarBlankIcon,
   ClockCountdownIcon,
-} from '@phosphor-icons/react';
+} from "@phosphor-icons/react";
 
-type FilterTab = 'all' | 'active' | 'expired';
+type FilterTab = "all" | "active" | "expired";
 
 function isLinkExpired(expiresAt: string | null) {
   if (!expiresAt) return false;
@@ -41,8 +47,8 @@ export default function UrlsView() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentTab, setCurrentTab] = useState<FilterTab>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentTab, setCurrentTab] = useState<FilterTab>("all");
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -50,9 +56,9 @@ export default function UrlsView() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['urls'] });
+    await queryClient.invalidateQueries({ queryKey: ["urls"] });
     setTimeout(() => setIsRefreshing(false), 500);
-    toast.info('URLs refreshed');
+    toast.info("URLs refreshed");
   };
 
   const handleCopyLink = async (slug: string) => {
@@ -63,12 +69,16 @@ export default function UrlsView() {
       toast.success(`Copied /${slug} to clipboard!`);
       setTimeout(() => setCopiedSlug(null), 2000);
     } catch {
-      toast.error('Failed to copy link');
+      toast.error("Failed to copy link");
     }
   };
 
   const openShortLink = (slug: string) => {
-    window.open(`/${encodeURIComponent(slug)}`, '_blank', 'noopener,noreferrer');
+    window.open(
+      `/${encodeURIComponent(slug)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   // Filtered and sorted URLs
@@ -78,8 +88,8 @@ export default function UrlsView() {
     return urls.filter((link) => {
       // Tab filter
       const expired = isLinkExpired(link.expiresAt);
-      if (currentTab === 'active' && expired) return false;
-      if (currentTab === 'expired' && !expired) return false;
+      if (currentTab === "active" && expired) return false;
+      if (currentTab === "expired" && !expired) return false;
 
       // Search filter
       if (searchQuery.trim()) {
@@ -112,14 +122,14 @@ export default function UrlsView() {
     return { total: urls.length, totalClicks, active, expired };
   }, [urls]);
 
-function formatExpiryDate(expiresAt: string | null): string {
-  if (!expiresAt) return 'Permanent';
-  return new Date(expiresAt).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+  function formatExpiryDate(expiresAt: string | null): string {
+    if (!expiresAt) return "Permanent";
+    return new Date(expiresAt).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
 
   return (
     <div className="space-y-6 w-full">
@@ -136,13 +146,16 @@ function formatExpiryDate(expiresAt: string | null): string {
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">All Shortened URLs</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              All Shortened URLs
+            </h1>
             <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-muted border font-semibold">
               {stats.total} total
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Central directory to view, filter, track analytics, and manage all active redirect destinations.
+            Central directory to view, filter, track analytics, and manage all
+            active redirect destinations.
           </p>
         </div>
 
@@ -155,13 +168,18 @@ function formatExpiryDate(expiresAt: string | null): string {
             disabled={isLoading || isRefreshing}
             className="gap-1.5"
           >
-            <ArrowClockwiseIcon className={cn('size-3.5', isRefreshing && 'animate-spin')} />
+            <ArrowClockwiseIcon
+              className={cn("size-3.5", isRefreshing && "animate-spin")}
+            />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
 
           <Link
             to="/shorten"
-            className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'gap-1.5 font-medium')}
+            className={cn(
+              buttonVariants({ variant: "default", size: "sm" }),
+              "gap-1.5 font-medium",
+            )}
           >
             <PlusIcon className="size-3.5" weight="bold" />
             <span>Shorten New URL</span>
@@ -170,32 +188,46 @@ function formatExpiryDate(expiresAt: string | null): string {
       </header>
 
       {/* Summary Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="rounded-2xl border bg-card/70 backdrop-blur">
           <CardHeader className="pb-1">
-            <CardDescription className="text-[11px]">Total Links</CardDescription>
+            <CardDescription className="text-[11px]">
+              Total Links
+            </CardDescription>
             <CardTitle className="text-2xl font-mono">{stats.total}</CardTitle>
           </CardHeader>
         </Card>
 
-        <Card className="border">
+        <Card className="rounded-2xl border bg-card/70 backdrop-blur">
           <CardHeader className="pb-1">
-            <CardDescription className="text-[11px]">Total Clicks</CardDescription>
-            <CardTitle className="text-2xl font-mono text-primary">{stats.totalClicks.toLocaleString()}</CardTitle>
+            <CardDescription className="text-[11px]">
+              Total Clicks
+            </CardDescription>
+            <CardTitle className="text-2xl font-mono text-primary">
+              {stats.totalClicks.toLocaleString()}
+            </CardTitle>
           </CardHeader>
         </Card>
 
-        <Card className="border">
+        <Card className="rounded-2xl border bg-card/70 backdrop-blur">
           <CardHeader className="pb-1">
-            <CardDescription className="text-[11px]">Active Links</CardDescription>
-            <CardTitle className="text-2xl font-mono text-emerald-500">{stats.active}</CardTitle>
+            <CardDescription className="text-[11px]">
+              Active Links
+            </CardDescription>
+            <CardTitle className="text-2xl font-mono text-emerald-500">
+              {stats.active}
+            </CardTitle>
           </CardHeader>
         </Card>
 
-        <Card className="border">
+        <Card className="rounded-2xl border bg-card/70 backdrop-blur">
           <CardHeader className="pb-1">
-            <CardDescription className="text-[11px]">Expired Links</CardDescription>
-            <CardTitle className="text-2xl font-mono text-muted-foreground">{stats.expired}</CardTitle>
+            <CardDescription className="text-[11px]">
+              Expired Links
+            </CardDescription>
+            <CardTitle className="text-2xl font-mono text-muted-foreground">
+              {stats.expired}
+            </CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -203,39 +235,39 @@ function formatExpiryDate(expiresAt: string | null): string {
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
         {/* Filter Tabs */}
-        <div className="flex items-center p-1 rounded-none border bg-muted/30 text-xs w-fit">
+        <div className="flex items-center p-1 rounded-full border bg-muted/40 text-xs w-fit">
           <button
             type="button"
-            onClick={() => setCurrentTab('all')}
+            onClick={() => setCurrentTab("all")}
             className={cn(
-              'px-3 py-1 font-medium transition-colors cursor-pointer',
-              currentTab === 'all'
-                ? 'bg-background shadow-xs font-semibold text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
+              "px-3 py-1 rounded-full font-medium transition-colors cursor-pointer",
+              currentTab === "all"
+                ? "bg-background shadow-xs font-semibold text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             All ({stats.total})
           </button>
           <button
             type="button"
-            onClick={() => setCurrentTab('active')}
+            onClick={() => setCurrentTab("active")}
             className={cn(
-              'px-3 py-1 font-medium transition-colors cursor-pointer',
-              currentTab === 'active'
-                ? 'bg-background shadow-xs font-semibold text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
+              "px-3 py-1 rounded-full font-medium transition-colors cursor-pointer",
+              currentTab === "active"
+                ? "bg-background shadow-xs font-semibold text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             Active ({stats.active})
           </button>
           <button
             type="button"
-            onClick={() => setCurrentTab('expired')}
+            onClick={() => setCurrentTab("expired")}
             className={cn(
-              'px-3 py-1 font-medium transition-colors cursor-pointer',
-              currentTab === 'expired'
-                ? 'bg-background shadow-xs font-semibold text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
+              "px-3 py-1 rounded-full font-medium transition-colors cursor-pointer",
+              currentTab === "expired"
+                ? "bg-background shadow-xs font-semibold text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             Expired ({stats.expired})
@@ -255,7 +287,7 @@ function formatExpiryDate(expiresAt: string | null): string {
       </div>
 
       {/* URLs Table Card */}
-      <Card className="border">
+      <Card className="rounded-2xl border bg-card/70 backdrop-blur overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground text-xs">
@@ -276,20 +308,29 @@ function formatExpiryDate(expiresAt: string | null): string {
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-foreground">
-                  {searchQuery ? 'No matching links found' : 'No shortened links yet'}
+                  {searchQuery
+                    ? "No matching links found"
+                    : "No shortened links yet"}
                 </p>
                 <p className="text-[11px] text-muted-foreground max-w-sm">
                   {searchQuery
                     ? `No URLs matched "${searchQuery}". Try a different keyword or reset filters.`
-                    : 'Get started by creating your first shortened link with custom slugs and expiration dates.'}
+                    : "Get started by creating your first shortened link with custom slugs and expiration dates."}
                 </p>
               </div>
               {searchQuery ? (
-                <Button size="xs" variant="outline" onClick={() => setSearchQuery('')}>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => setSearchQuery("")}
+                >
                   Clear Search
                 </Button>
               ) : (
-                <Link to="/shorten" className={buttonVariants({ variant: 'default', size: 'sm' })}>
+                <Link
+                  to="/shorten"
+                  className={buttonVariants({ variant: "default", size: "sm" })}
+                >
                   <PlusIcon className="size-3.5 mr-1" />
                   Shorten a URL
                 </Link>
@@ -303,8 +344,12 @@ function formatExpiryDate(expiresAt: string | null): string {
                     <TableHead className="w-[180px]">Slug</TableHead>
                     <TableHead>Original Destination</TableHead>
                     <TableHead className="w-[140px]">Expiration</TableHead>
-                    <TableHead className="text-right w-[90px]">Clicks</TableHead>
-                    <TableHead className="text-right w-[140px]">Actions</TableHead>
+                    <TableHead className="text-right w-[90px]">
+                      Clicks
+                    </TableHead>
+                    <TableHead className="text-right w-[140px]">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -313,14 +358,19 @@ function formatExpiryDate(expiresAt: string | null): string {
                     const isCopied = copiedSlug === link.slug;
 
                     return (
-                      <TableRow key={link.slug} className={cn(expired && 'opacity-60 bg-muted/20')}>
+                      <TableRow
+                        key={link.slug}
+                        className={cn(expired && "opacity-60 bg-muted/20")}
+                      >
                         {/* Slug column */}
                         <TableCell className="font-mono text-xs font-semibold">
                           <div className="flex items-center gap-1.5">
-                            <span className={cn(
-                              'size-1.5 rounded-full shrink-0',
-                              expired ? 'bg-destructive' : 'bg-emerald-500'
-                            )} />
+                            <span
+                              className={cn(
+                                "size-1.5 rounded-full shrink-0",
+                                expired ? "bg-destructive" : "bg-emerald-500",
+                              )}
+                            />
                             <Link
                               to={`/analytics/${link.slug}`}
                               className="text-primary hover:underline truncate"
@@ -333,13 +383,18 @@ function formatExpiryDate(expiresAt: string | null): string {
 
                         {/* Destination URL column */}
                         <TableCell className="max-w-md truncate text-xs text-muted-foreground font-mono">
-                          <span title={link.originalUrl}>{link.originalUrl}</span>
+                          <span title={link.originalUrl}>
+                            {link.originalUrl}
+                          </span>
                         </TableCell>
 
                         {/* Expiration column */}
                         <TableCell className="text-xs font-mono text-muted-foreground">
                           {link.expiresAt ? (
-                            <span className="inline-flex items-center gap-1" title={new Date(link.expiresAt).toLocaleString()}>
+                            <span
+                              className="inline-flex items-center gap-1"
+                              title={new Date(link.expiresAt).toLocaleString()}
+                            >
                               <ClockCountdownIcon className="size-3 text-primary" />
                               <span>{formatExpiryDate(link.expiresAt)}</span>
                             </span>
@@ -392,7 +447,9 @@ function formatExpiryDate(expiresAt: string | null): string {
                               type="button"
                               variant="ghost"
                               size="icon-xs"
-                              onClick={() => navigate(`/analytics/${link.slug}`)}
+                              onClick={() =>
+                                navigate(`/analytics/${link.slug}`)
+                              }
                               title="View performance analytics"
                               aria-label={`Analytics for ${link.slug}`}
                             >
