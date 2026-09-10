@@ -19,7 +19,8 @@ const { listUrls } = require("../services/urlList");
 
 const {
   getClickQueues,
-  enqueueClick,
+  captureClickContext,
+  enqueueClickFromContext,
 } = require("../services/queue");
 const logger = require("../lib/logger");
 const { RATE_LIMITS } = require("../services/rateLimiter");
@@ -166,10 +167,22 @@ app.get("/:slug", rateLimit("redirect", RATE_LIMITS.redirect), async (req, res) 
       return res.status(404).json({ error: "Slug not found or expired" });
     }
 
-    // Enqueue click event asynchronously (fire-and-forget, non-blocking)
-    enqueueClick(clickQueue, slug, req);
+    // Snapshot cheap raw request fields, send the 301 first, then perform
+    // analytics preparation (hashing, GeoIP, validation, queue submit)
+    // after the response has been flushed so it no longer delays the redirect.
+    const clickContext = captureClickContext(
+      slug,
+      req,
+      req.rateLimitNow || new Date(),
+    );
 
     res.redirect(301, originalUrl);
+
+    setImmediate(() => {
+      enqueueClickFromContext(clickQueue, clickContext).catch((err) => {
+        logger.error({ slug }, err, "Deferred click enqueue failed");
+      });
+    });
   } catch (err) {
     logger.error({ slug: req.params.slug, err }, "Redirect failure");
     res.status(500).json({

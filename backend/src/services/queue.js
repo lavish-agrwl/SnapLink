@@ -65,26 +65,49 @@ function getClientIp(req) {
 }
 
 /**
- * Enqueue a click event asynchronously (non-blocking).
- * @param {object} queue - BullMQ Queue instance
+ * Snapshot the cheap raw request fields needed for analytics.
+ * This performs no hashing, no GeoIP lookup, no validation, and no
+ * queue I/O, so it is safe to call on the redirect hot path before
+ * the 301 is sent. The expensive preparation happens later in
+ * `enqueueClickFromContext`, after the response has been flushed.
+ *
  * @param {string} slug - Short slug
  * @param {object} req - Express request object
  * @param {Date} [timestamp] - Click timestamp (defaults to now)
+ * @returns {{slug: string, clientIp: string, userAgent: string, referrer: string|null, geoHeaderCountry: string|null, timestamp: Date}}
  */
-async function enqueueClick(queue, slug, req, timestamp = new Date()) {
-  const clientIp = getClientIp(req);
-  const ipHash = hashIp(clientIp);
-  const userAgent = req.headers["user-agent"] || "";
-  const referrer = req.headers["referer"] || null;
-
-  // 1. Try configurable header (e.g., GEOIP_HEADER_NAME)
+function captureClickContext(slug, req, timestamp = new Date()) {
   const geoHeader = process.env.GEOIP_HEADER_NAME;
-  let country = geoHeader ? req.headers[geoHeader] : null;
+  return {
+    slug,
+    clientIp: getClientIp(req),
+    userAgent: req.headers["user-agent"] || "",
+    referrer: req.headers["referer"] || null,
+    geoHeaderCountry: geoHeader ? req.headers[geoHeader] || null : null,
+    timestamp: timestamp instanceof Date ? timestamp : new Date(timestamp),
+  };
+}
+
+/**
+ * Perform the expensive analytics preparation (SHA-256 hashing, GeoIP
+ * lookup, payload validation) and submit the click job to BullMQ.
+ * Intended to run after the redirect response has been sent, so this
+ * work no longer delays the 301. The resulting payload and queue
+ * behavior are identical to `enqueueClick`.
+ *
+ * @param {object} queue - BullMQ Queue instance
+ * @param {object} ctx - Context captured by `captureClickContext`
+ */
+async function enqueueClickFromContext(queue, ctx) {
+  const ipHash = hashIp(ctx.clientIp);
+
+  // 1. Prefer the explicitly configured geo header captured pre-redirect
+  let country = ctx.geoHeaderCountry || null;
 
   // 2. Fallback to geoip-lite lookup
   if (!country) {
     try {
-      const geo = geoip.lookup(clientIp);
+      const geo = geoip.lookup(ctx.clientIp);
       country = geo ? geo.country : null;
     } catch (err) {
       logger.warn({ ipHash }, err, "GeoIP lookup failed");
@@ -94,26 +117,37 @@ async function enqueueClick(queue, slug, req, timestamp = new Date()) {
   // 3. Use "unknown" sentinel for missing/failed lookups
   country = country || "unknown";
 
-    const jobId = `${slug}-${timestamp.getTime()}`;
+    const jobId = `${ctx.slug}-${ctx.timestamp.getTime()}`;
     try {
       // Fire-and-forget: don't await, add to queue without blocking
       const payload = buildClickEventPayload({
-        slug,
-        timestamp,
+        slug: ctx.slug,
+        timestamp: ctx.timestamp,
         ipHash,
-        userAgent,
-        referrer,
+        userAgent: ctx.userAgent,
+        referrer: ctx.referrer,
         country,
       });
 
       queue.add("click", payload, { jobId }).catch((err) => {
-        logger.error({ slug, jobId, ipHash }, err, "Failed to enqueue click event");
+        logger.error({ slug: ctx.slug, jobId, ipHash }, err, "Failed to enqueue click event");
       });
     } catch (err) {
       // Queue enqueue failure is non-critical; log and continue
-      logger.error({ slug, jobId, ipHash }, err, "Failed to enqueue click event");
+      logger.error({ slug: ctx.slug, jobId, ipHash }, err, "Failed to enqueue click event");
     }
 
+}
+
+/**
+ * Enqueue a click event asynchronously (non-blocking).
+ * @param {object} queue - BullMQ Queue instance
+ * @param {string} slug - Short slug
+ * @param {object} req - Express request object
+ * @param {Date} [timestamp] - Click timestamp (defaults to now)
+ */
+async function enqueueClick(queue, slug, req, timestamp = new Date()) {
+  return enqueueClickFromContext(queue, captureClickContext(slug, req, timestamp));
 }
 
 module.exports = {
@@ -123,5 +157,7 @@ module.exports = {
   getClickQueues,
   hashIp,
   getClientIp,
+  captureClickContext,
+  enqueueClickFromContext,
   enqueueClick,
 };
