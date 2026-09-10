@@ -20,10 +20,10 @@
  *   k6 run performance/k6/benchmark.js --env TEST=mixed --env RPS=100
  *   k6 run performance/k6/benchmark.js --env TEST=new --env RPS=2 --env DURATION=5s
  *
- * NOTE on TEST=new: only 10 reserved slugs exist, selected sequentially, so a
- * clean run creates each exactly once (e.g. RPS=2 DURATION=5s ~= 10 creates).
- * Further creates repeat slugs and fail with 409 by design (slug -> destination
- * is immutable); reset the dataset before re-running this workload.
+ * NOTE on TEST=new: only 10 reserved slugs exist. The scenario runs exactly
+ * one shared iteration per reserved URL, so a run creates each reserved NEW
+ * URL once and then stops. Re-run only after resetting the dataset, since
+ * already-created slugs fail with 409 (slug -> destination is immutable).
  */
 
 import http from "k6/http";
@@ -46,7 +46,29 @@ const NO_FOLLOW = { redirects: 0 };
 export const options = {
   // Show p99 in the end-of-test summary (med doubles as p50).
   summaryTrendStats: ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
-  scenarios: {
+  scenarios: newScenario(),
+  thresholds: {
+    http_req_failed: ["rate<0.05"],
+    http_req_duration: ["p(95)<2000"],
+    checks: ["rate>0.95"],
+  },
+};
+
+// TEST=new runs exactly one iteration per reserved URL so no slug is ever
+// created twice. All other workloads use constant arrival rate.
+function newScenario() {
+  if (TEST === "new") {
+    return {
+      benchmark: {
+        executor: "shared-iterations",
+        iterations: NEW_URLS.length,
+        vus: Math.min(Math.max(RPS, 1), NEW_URLS.length),
+        maxDuration: DURATION,
+      },
+    };
+  }
+
+  return {
     benchmark: {
       executor: "constant-arrival-rate",
       rate: RPS,
@@ -55,13 +77,8 @@ export const options = {
       preAllocatedVUs: Math.min(Math.max(RPS * 2, 10), 500),
       maxVUs: Math.max(RPS * 4, 100),
     },
-  },
-  thresholds: {
-    http_req_failed: ["rate<0.05"],
-    http_req_duration: ["p(95)<2000"],
-    checks: ["rate>0.95"],
-  },
-};
+  };
+}
 
 function getRedirect(slug) {
   const res = http.get(`${BASE_URL}/${slug}`, NO_FOLLOW);
