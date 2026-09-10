@@ -6,10 +6,14 @@
  * Dataset:      performance/data/urls.json (deterministic hot/cold/new slugs).
  *
  * Workloads (--env TEST=hot|cold|new|mixed, default hot):
- *   hot    GET /<hot-slug>              (expects Redis hit  -> 301)
- *   cold   GET /<cold-slug>             (expects miss -> Mongo -> 301)
- *   new    POST /api/shorten            (creates the 10 reserved NEW urls)
- *   mixed  90% hot redirects / 9% cold redirects / 1% creations
+ *   hot    = 100% HOT redirects
+ *   cold   = 100% COLD redirects
+ *   new    = exactly 10 reserved URL creations
+ *   mixed  = 90% HOT + 10% COLD redirects
+ *
+ * MIXED intentionally contains no NEW requests: NEW is a finite deterministic
+ * workload (10 reserved slugs), so it cannot sustain a long-running test
+ * without producing duplicate-slug 409s. Run TEST=new separately instead.
  *
  * Redirects are never followed: the 301 from SnapLink is the measurement.
  *
@@ -114,13 +118,10 @@ export default function () {
   } else if (TEST === "new") {
     createReservedUrl(nextReservedUrl());
   } else if (TEST === "mixed") {
-    const roll = Math.random();
-    if (roll < 0.9) {
+    if (Math.random() < 0.9) {
       getRedirect(randomOf(HOT_URLS).slug);
-    } else if (roll < 0.99) {
-      getRedirect(randomOf(COLD_URLS).slug);
     } else {
-      createReservedUrl(nextReservedUrl());
+      getRedirect(randomOf(COLD_URLS).slug);
     }
   } else {
     throw new Error(
