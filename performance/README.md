@@ -29,6 +29,28 @@ Both scripts read `MONGODB_URI` / `REDIS_URL` from the environment with a
 script before the Redis script — the Redis script treats MongoDB as the source
 of truth and fails if hot documents are missing.
 
+### Redis in the compose project
+
+The compose `redis` container publishes port `6379` to the host, so run the
+scripts from the host with an explicit localhost URL:
+
+```bash
+# Start the compose redis (if not already running)
+docker compose up -d redis
+
+MONGODB_URI="<your-mongo-uri>" \
+REDIS_URL="redis://localhost:6379" \
+  node performance/scripts/populate-redis.js
+```
+
+Why the explicit `REDIS_URL`: `backend/.env` sets
+`REDIS_URL="redis://redis:6379"`, where `redis` is the compose-network
+hostname — it only resolves *inside* containers, not on the host. An explicit
+environment variable always wins over `backend/.env` (dotenv never overrides
+existing variables), so passing `REDIS_URL=redis://localhost:6379` targets the
+same containerized Redis through the published port. (Inside a compose
+container, keep `REDIS_URL="redis://redis:6379"`.)
+
 ## What each script changes
 
 `populate-mongodb.js`:

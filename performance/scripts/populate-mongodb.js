@@ -13,29 +13,56 @@
  *   - exists with different mapping  -> abort with an error, never overwrite
  *
  * Never deletes or wipes collections. Uses the existing Url Mongoose model
- * (backend/src/models/url.js) so the schema, field names and TTL index
+ * (src/models/url.js) so the schema, field names and TTL index
  * behavior are exactly those of the application.
  *
- * Usage (from the repository root):
+ * Usage (host checkout, from the repository root):
+ *   NODE_PATH=backend/node_modules \
  *   MONGODB_URI="mongodb://localhost:27017/url-shortener" \
  *     node performance/scripts/populate-mongodb.js
+ *
+ * Usage (app container, dependencies resolve from /usr/src/app/node_modules):
+ *   docker compose exec app node performance/scripts/populate-mongodb.js
  */
 
 const fs = require("fs");
 const path = require("path");
 
-const BACKEND_ROOT = path.join(__dirname, "..", "..", "backend");
-const mongoose = require(path.join(BACKEND_ROOT, "node_modules", "mongoose"));
-const dotenv = require(path.join(BACKEND_ROOT, "node_modules", "dotenv"));
+// Application sources live directly under /usr/src/app in the container
+// image and under backend/ in a host checkout. Probe for the layout instead
+// of hardcoding a backend/ directory.
+function findAppRoot() {
+  const candidates = [
+    path.join(__dirname, "..", ".."),
+    path.join(__dirname, "..", "..", "backend"),
+  ];
+
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, "src", "models", "url.js"))) {
+      return dir;
+    }
+  }
+
+  throw new Error(
+    "Cannot locate the SnapLink application (src/models/url.js was not found).",
+  );
+}
+
+const APP_ROOT = findAppRoot();
+
+// Normal Node module resolution against the already-installed dependencies
+// (/usr/src/app/node_modules in the container). On a host checkout, run with
+// NODE_PATH=backend/node_modules so the same bare specifiers resolve.
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
 
 // Load env the same way the backend does, without hardcoding secrets.
-// Explicit backend/.env fallback covers running from the repository root
-// (dotenv alone would only look at the current working directory).
-// Existing environment variables are never overridden.
+// The explicit .env fallback only exists in host checkouts (it is excluded
+// from the image). Existing environment variables are never overridden.
 dotenv.config();
-dotenv.config({ path: path.join(BACKEND_ROOT, ".env") });
+dotenv.config({ path: path.join(APP_ROOT, ".env") });
 
-const Url = require(path.join(BACKEND_ROOT, "src", "models", "url"));
+const Url = require(path.join(APP_ROOT, "src", "models", "url"));
 
 const DATASET_PATH = path.join(__dirname, "..", "data", "urls.json");
 const CREATED_BY = "perf-benchmark";
@@ -139,9 +166,7 @@ async function ensureBenchmarkUrls({ entries, now = new Date() }) {
 async function run({ mongoUri, dataset, now = new Date() } = {}) {
   const uri = mongoUri || process.env.MONGODB_URI;
   if (!uri) {
-    throw new Error(
-      "Missing MONGODB_URI. Set it in the environment or backend/.env.",
-    );
+    throw new Error("Missing MONGODB_URI. Set it in the environment.");
   }
 
   const data = dataset || loadDataset();

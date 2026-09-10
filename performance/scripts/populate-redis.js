@@ -15,28 +15,57 @@
  * Redis instance is shared with the analytics cache, the rate limiter
  * (rl:* keys) and BullMQ queues.
  *
- * Usage (from the repository root):
+ * Usage (host checkout, from the repository root):
+ *   NODE_PATH=backend/node_modules \
  *   MONGODB_URI="mongodb://localhost:27017/url-shortener" \
  *   REDIS_URL="redis://localhost:6379" \
  *     node performance/scripts/populate-redis.js
+ *
+ * Usage (app container, dependencies resolve from /usr/src/app/node_modules):
+ *   docker compose exec app node performance/scripts/populate-redis.js
  */
 
 const fs = require("fs");
 const path = require("path");
 
-const BACKEND_ROOT = path.join(__dirname, "..", "..", "backend");
-const mongoose = require(path.join(BACKEND_ROOT, "node_modules", "mongoose"));
-const dotenv = require(path.join(BACKEND_ROOT, "node_modules", "dotenv"));
+// Application sources live directly under /usr/src/app in the container
+// image and under backend/ in a host checkout. Probe for the layout instead
+// of hardcoding a backend/ directory.
+function findAppRoot() {
+  const candidates = [
+    path.join(__dirname, "..", ".."),
+    path.join(__dirname, "..", "..", "backend"),
+  ];
 
-// Same env mechanism as the backend; backend/.env fallback covers running
-// from the repository root. Existing environment variables are not overridden.
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, "src", "models", "url.js"))) {
+      return dir;
+    }
+  }
+
+  throw new Error(
+    "Cannot locate the SnapLink application (src/models/url.js was not found).",
+  );
+}
+
+const APP_ROOT = findAppRoot();
+
+// Normal Node module resolution against the already-installed dependencies
+// (/usr/src/app/node_modules in the container). On a host checkout, run with
+// NODE_PATH=backend/node_modules so the same bare specifiers resolve.
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+
+// Same env mechanism as the backend, without hardcoding secrets. The
+// explicit .env fallback only exists in host checkouts (it is excluded from
+// the image). Existing environment variables are never overridden.
 dotenv.config();
-dotenv.config({ path: path.join(BACKEND_ROOT, ".env") });
+dotenv.config({ path: path.join(APP_ROOT, ".env") });
 
-const Url = require(path.join(BACKEND_ROOT, "src", "models", "url"));
-const constants = require(path.join(BACKEND_ROOT, "src", "config", "constants"));
+const Url = require(path.join(APP_ROOT, "src", "models", "url"));
+const constants = require(path.join(APP_ROOT, "src", "config", "constants"));
 const { getRedisClient } = require(
-  path.join(BACKEND_ROOT, "src", "services", "redisClient"),
+  path.join(APP_ROOT, "src", "services", "redisClient"),
 );
 
 const DATASET_PATH = path.join(__dirname, "..", "data", "urls.json");
@@ -51,8 +80,8 @@ function analyticsKey(slug) {
 
 /**
  * Build the Redis cache value exactly as the application does
- * (backend/src/services/shorten.js cacheShortUrl and
- * backend/src/services/redirect.js cache repopulation).
+ * (src/services/shorten.js cacheShortUrl and
+ * src/services/redirect.js cache repopulation).
  */
 function buildCacheValue(originalUrl, expiresAt) {
   return JSON.stringify({
@@ -100,9 +129,7 @@ async function run({ redisClient, redisUrl, dataset, manageConnections = false }
     if (!client) {
       const url = redisUrl || process.env.REDIS_URL;
       if (!url) {
-        throw new Error(
-          "Missing REDIS_URL. Set it in the environment or backend/.env.",
-        );
+        throw new Error("Missing REDIS_URL. Set it in the environment.");
       }
       client = getRedisClient(url);
       ownsClient = manageConnections;
@@ -173,9 +200,7 @@ async function run({ redisClient, redisUrl, dataset, manageConnections = false }
 async function main() {
   const mongoUri = process.env.MONGODB_URI;
   if (!mongoUri) {
-    throw new Error(
-      "Missing MONGODB_URI. Set it in the environment or backend/.env.",
-    );
+    throw new Error("Missing MONGODB_URI. Set it in the environment.");
   }
 
   await mongoose.connect(mongoUri);
@@ -194,7 +219,7 @@ async function main() {
     await mongoose.disconnect();
     try {
       const { getRedisClient: getClient } = require(
-        path.join(BACKEND_ROOT, "src", "services", "redisClient")
+        path.join(APP_ROOT, "src", "services", "redisClient")
       );
       const url = process.env.REDIS_URL;
       if (url) {
