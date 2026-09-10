@@ -77,3 +77,9 @@
 - [x] Create dedicated All URLs Page with search, status filtering, and link action controls.
 - [x] Refine Analytics view and add custom 404 Not Found page for unknown routes.
 - [x] Verify frontend build, typechecking, linting, and multi-page routing.
+
+## Phase 11: Redirect-Path Analytics Deferral (Improvement 1)
+
+- [x] Measured redirect-path analytics costs: sync prep ~7us/redirect (SHA-256 ~1.6us, GeoIP ~1.5us, Zod ~2.7us — none individually material); BullMQ `queue.add` awaited p50 ~0.5ms but fire-and-forget initiation ~1us, with background Redis I/O contending after the response.
+- [x] Split `enqueueClick` into cheap `captureClickContext` (raw field copies only) + `enqueueClickFromContext` (hashing, GeoIP, validation, queue submit) with byte-identical payloads.
+- [x] Redirect handler now sends the 301 first and defers analytics prep via `setImmediate`, cutting request-path analytics work ~10x (7.08us to 0.66us per redirect); 301/404/expiry, rate limiting, analytics data model, and MongoDB source-of-truth unchanged.
