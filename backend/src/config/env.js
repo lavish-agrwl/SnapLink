@@ -31,10 +31,30 @@ function loadEnv(source = process.env) {
   }
 
   env.NODE_ENV = nodeEnv;
+  env.RATE_LIMIT_ENABLED = parseRateLimitEnabled(source.RATE_LIMIT_ENABLED);
 
   return Object.freeze(env);
 }
 
+function parseRateLimitEnabled(value) {
+  if (typeof value !== 'string') {
+    return true;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === 'true') {
+    return true;
+  }
+
+  if (normalized === 'false') {
+    return false;
+  }
+
+  return true;
+}
+
 module.exports = {
   loadEnv,
+  parseRateLimitEnabled,
 };

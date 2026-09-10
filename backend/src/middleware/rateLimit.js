@@ -4,10 +4,18 @@ const {
 } = require("../services/rateLimiter");
 const { getClientIp } = require("../services/queue");
 
-function createRateLimitMiddleware(redisClient) {
+function createRateLimitMiddleware(redisClient, options = {}) {
+  const enabled =
+    typeof options === 'boolean' ? options : options.enabled !== false;
+
   return function rateLimit(endpoint, config) {
     return async (req, res, next) => {
       const now = new Date();
+
+      if (!enabled) {
+        req.rateLimitNow = now;
+        return next();
+      }
       const result = await checkRateLimit(
         redisClient,
         getClientIp(req),

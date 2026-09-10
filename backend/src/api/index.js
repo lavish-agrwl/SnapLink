@@ -37,7 +37,9 @@ const adminAuth = createAdminAuth({
   password: env.ADMIN_PASSWORD,
   isProduction: env.NODE_ENV === "production",
 });
-const rateLimit = createRateLimitMiddleware(redisClient);
+const rateLimit = createRateLimitMiddleware(redisClient, {
+  enabled: env.RATE_LIMIT_ENABLED,
+});
 
 app.use(helmet());
 app.use(express.json());
