@@ -83,3 +83,10 @@
 - [x] Measured redirect-path analytics costs: sync prep ~7us/redirect (SHA-256 ~1.6us, GeoIP ~1.5us, Zod ~2.7us — none individually material); BullMQ `queue.add` awaited p50 ~0.5ms but fire-and-forget initiation ~1us, with background Redis I/O contending after the response.
 - [x] Split `enqueueClick` into cheap `captureClickContext` (raw field copies only) + `enqueueClickFromContext` (hashing, GeoIP, validation, queue submit) with byte-identical payloads.
 - [x] Redirect handler now sends the 301 first and defers analytics prep via `setImmediate`, cutting request-path analytics work ~10x (7.08us to 0.66us per redirect); 301/404/expiry, rate limiting, analytics data model, and MongoDB source-of-truth unchanged.
+
+## Phase 12: Redirect-Path Negative Caching (Improvement 2)
+
+- [x] Cache MongoDB misses for unknown/expired slugs as a short-lived negative entry (`{"notFound":true}`, 30s TTL) so repeated invalid-slug requests are served from Redis without reaching MongoDB.
+- [x] Serve 404 directly on negative-cache hits; replace soft-expired positive entries with the negative entry.
+- [x] Bound stale-negative masking of subsequently created slugs: 30s conservative TTL, creation overwrites via plain `SET`, and negative writes use `NX` to avoid clobbering a concurrent creation.
+- [x] Validated with mock-backed checks (miss→cache→hit skips Mongo, creation overwrites, NX race safety, soft-expiry conversion, positive-hit unchanged); lint clean and unit tests pass.

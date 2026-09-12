@@ -15,20 +15,36 @@ const constants = require("../config/constants");
  */
 async function getRedirectUrl(slug, cacheClient, now = new Date()) {
   const cacheKey = `url:${slug}`;
+  const negativeValue = constants.CACHE.NEGATIVE_VALUE;
+  const negativeTtl = constants.CACHE.NEGATIVE_TTL_SECONDS;
 
   // Try Redis first
   const cachedMetadata = await cacheClient.get(cacheKey);
   if (cachedMetadata) {
+    // Short-lived negative cache: a previous MongoDB miss. Serve the
+    // 404 without touching MongoDB again.
+    if (cachedMetadata === negativeValue) {
+      return null;
+    }
     try {
       const metadata = JSON.parse(cachedMetadata);
+      // Forward-compatible check in case the sentinel encoding changes.
+      if (metadata && metadata.notFound === true) {
+        return null;
+      }
       const { originalUrl, expiresAt } = metadata;
 
       // Check if the cached entry has expired
       if (expiresAt) {
         const expiryTime = new Date(expiresAt);
         if (now >= expiryTime) {
-          // Soft-expired: delete from cache and return null
-          await cacheClient.del(cacheKey).catch(() => {});
+          // Soft-expired: replace with a short-lived negative entry so
+          // repeated requests for this expired slug do not hit MongoDB.
+          // Safe because slug -> URL is immutable; an expired slug can
+          // never become active again.
+          await cacheClient
+            .set(cacheKey, negativeValue, "EX", negativeTtl)
+            .catch(() => {});
           return null;
         }
       }
@@ -43,7 +59,16 @@ async function getRedirectUrl(slug, cacheClient, now = new Date()) {
   // Cache miss — fall back to MongoDB
   const urlRecord = await findActiveUrlBySlug(slug, now);
   if (!urlRecord) {
-    // Not found or expired
+    // Not found or expired: write a short-lived negative cache entry so
+    // repeated requests for this unknown slug do not reach MongoDB.
+    // NX avoids clobbering a positive entry if the slug was created
+    // concurrently between the MongoDB lookup and this write, bounding
+    // the worst-case masking window to NEGATIVE_TTL_SECONDS.
+    await cacheClient
+      .set(cacheKey, negativeValue, "EX", negativeTtl, "NX")
+      .catch((err) => {
+        logger.warn({ slug, err }, "Failed to write negative redirect cache");
+      });
     return null;
   }
 

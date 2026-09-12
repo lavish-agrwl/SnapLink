@@ -60,6 +60,13 @@ module.exports = {
   },
   CACHE: {
     REDIRECT_TTL_SECONDS: 86400, // 24 hours
+    // Short TTL for negative cache entries (unknown/expired slugs).
+    // Kept conservative so a stale negative entry can mask a
+    // subsequently created slug for at most this long. Creation
+    // overwrites the key with the positive entry, and negative writes
+    // use NX to avoid clobbering a concurrent creation.
+    NEGATIVE_TTL_SECONDS: 30,
+    NEGATIVE_VALUE: JSON.stringify({ notFound: true }),
   },
   SLUG: {
     BASE62_ALPHABET: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
